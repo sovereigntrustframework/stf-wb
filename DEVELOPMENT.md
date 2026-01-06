@@ -23,6 +23,33 @@ ruff check stfwb stfwb_cli tests
 mypy stfwb stfwb_cli
 ```
 
+## Type Checking (Pyright/Pylance)
+
+- Pylance runs in strict mode for this workspace. See `.vscode/settings.json` and `pyrightconfig.json`.
+- Treat Pylance errors as build blockers; fix or explicitly type-narrow rather than suppress.
+- Preferred patterns:
+	- Explicit parameter and return types; avoid implicit `Any`.
+	- Use `TypedDict`, `Protocol`, and generics where appropriate.
+	- Handle `Optional[T]` with guards; avoid unchecked `None` access.
+	- Prefer `datetime.now(datetime.UTC)` over `utcnow()` for timezone-aware values.
+	- Use `assert isinstance(...)` or `if` guards for type narrowing.
+- Optional CLI (if you want a terminal check):
+
+```bash
+npm install --save-dev pyright
+npx pyright --level error
+```
+
+### Pre-commit hooks
+
+Install and enable hooks so type/style checks run before every commit:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
 ## Running CLI
 
 ```bash

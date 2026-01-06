@@ -1,0 +1,6 @@
+{
+  "include": ["stfwb", "stfwb_cli", "tests"],
+  "typeCheckingMode": "strict",
+  "venvPath": ".",
+  "venv": ".venv"
+}
