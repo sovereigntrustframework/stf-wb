@@ -269,6 +269,7 @@ def iteration_create(
     """Create a new iteration."""
     from stfwb.core.iteration import Iteration
     from stfwb.utils.logging import setup_logging
+    from stfwb.utils.storage import load_project
 
     if store_dir is None:
         cfg = ctx.obj.get("config") if ctx.obj else None
@@ -278,7 +279,15 @@ def iteration_create(
     log_file = ctx.obj.get("log_file") if ctx.obj else None
     setup_logging(level, log_file)  # type: ignore[arg-type]
 
-    iteration = Iteration(project_id=project_id)  # pyright: ignore[reportCallIssue]
+    proj = None
+    try:
+        proj = load_project(project_id, store_dir)
+    except FileNotFoundError:
+        # Allow iteration creation without existing project (legacy behavior)
+        proj = None
+
+    meta = {"target_uri": proj.target_uri} if proj else {}
+    iteration = Iteration(project_id=project_id, metadata=meta)  # pyright: ignore[reportCallIssue]
     click.echo(f"Creating iteration for project {project_id}")
     out_path = save_iteration(iteration, store_dir)
     click.echo(f"Created iteration {iteration.id} for project {project_id} at {out_path}")

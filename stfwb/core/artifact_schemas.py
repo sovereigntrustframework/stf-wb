@@ -13,6 +13,10 @@ from pydantic import BaseModel, Field
 
 class S0Content(BaseModel):
     summary: str = Field(default="source snapshot")
+    source_uri: Optional[str] = None
+    snapshot_time: Optional[str] = None
+    commit: Optional[str] = None
+    tree_hash: Optional[str] = None
     files: Optional[List[str]] = None
 
 

@@ -9,15 +9,18 @@ from __future__ import annotations
 from typing import Any, Callable, Protocol
 
 from stfwb.core.artifact import S0Artifact, S1Artifact, S2Artifact, S3Artifact, S4Artifact, S5Artifact
+from stfwb.core.iteration import Iteration
 
 
 class StepPlugin(Protocol):
     """Protocol for step plugins.
     
-    A plugin is a callable that takes a step ID and returns an artifact.
+    A plugin is a callable that takes the iteration and step ID and returns an artifact.
     """
 
-    def __call__(self, step_id: str) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
+    def __call__(
+        self, iteration: Iteration, step_id: str
+    ) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
         """Generate an artifact for the given step."""
         ...
 

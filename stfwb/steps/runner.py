@@ -7,6 +7,12 @@ results to `Iteration.steps` with timestamps and statuses.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
+import os
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
 from typing import Final, List, Literal
 
 from stfwb.core.artifact import (
@@ -49,20 +55,108 @@ def _achieved_count(iteration: Iteration) -> int:
     return count
 
 
-def _make_artifact(step_id: str) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
+def _list_files(base: Path, limit: int = 200) -> list[str]:
+    """Return up to `limit` relative file paths under base."""
+    paths: list[str] = []
+    for root, _dirs, files in os.walk(base):  # type: ignore[name-defined]
+        for name in files:
+            rel = Path(root, name).relative_to(base)
+            paths.append(str(rel))
+            if len(paths) >= limit:
+                return paths
+    return paths
+
+
+def _hash_tree(base: Path) -> str:
+    """Compute a deterministic hash of file contents under base."""
+    sha = hashlib.sha256()
+    for root, _dirs, files in os.walk(base):  # type: ignore[name-defined]
+        for name in sorted(files):
+            full = Path(root, name)
+            sha.update(str(full.relative_to(base)).encode("utf-8"))
+            with full.open("rb") as f:
+                while chunk := f.read(8192):
+                    sha.update(chunk)
+    return sha.hexdigest()
+
+
+def _default_s0_artifact(iteration: Iteration) -> S0Artifact:
+    """Generate a default S0 artifact by snapshotting the target source."""
+    target_uri = iteration.metadata.get("target_uri") if iteration.metadata else None
+    now = datetime.now(UTC)
+    meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id=f"s0-{int(now.timestamp())}")
+
+    if not target_uri:
+        content = S0Content(summary="source snapshot (no target)")
+        return S0Artifact(metadata=meta, content=content.model_dump(mode="json"))
+
+    snapshot_time = now.isoformat()
+
+    def _content_from_local(path: Path) -> S0Content:
+        if not path.exists():
+            raise FileNotFoundError(f"Target path does not exist: {path}")
+        tree_hash = _hash_tree(path)
+        files = _list_files(path)
+        return S0Content(
+            summary="source snapshot (local)",
+            source_uri=str(path),
+            snapshot_time=snapshot_time,
+            commit=None,
+            tree_hash=tree_hash,
+            files=files,
+        )
+
+    def _content_from_git(uri: str) -> S0Content:
+        tmpdir = Path(tempfile.mkdtemp(prefix="stfwb-s0-"))
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth=1", uri, str(tmpdir)],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            head = subprocess.run(
+                ["git", "-C", str(tmpdir), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            commit = head.stdout.strip()
+            files = _list_files(tmpdir)
+            return S0Content(
+                summary="source snapshot (git)",
+                source_uri=uri,
+                snapshot_time=snapshot_time,
+                commit=commit,
+                tree_hash=None,
+                files=files,
+            )
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    if target_uri.startswith(("http://", "https://", "git@", "ssh://")):
+        content = _content_from_git(target_uri)
+    else:
+        content = _content_from_local(Path(target_uri))
+
+    return S0Artifact(metadata=meta, content=content.model_dump(mode="json"))
+
+
+def _make_artifact(iteration: Iteration, step_id: str) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
     """Create an artifact for a step, using plugin if registered, else default."""
     from stfwb.steps.plugin import get_plugin
 
     # Check if a plugin is registered for this step
     plugin = get_plugin(step_id)
     if plugin is not None:
-        return plugin(step_id)
+        return plugin(iteration, step_id)
 
     # Default artifact generation
     now = datetime.now(UTC)
     if step_id == "s0":
-        meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
-        return S0Artifact(metadata=meta, content=S0Content().model_dump(mode="json"))
+        return _default_s0_artifact(iteration)
     if step_id == "s1":
         meta = ArtifactMetadata(kind="s1.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
         return S1Artifact(metadata=meta, content=S1Content().model_dump(mode="json"))
@@ -118,7 +212,7 @@ def run_next_step(iteration: Iteration, action: Literal["normal", "skip", "redo"
         # Re-run the previous achieved step id
         prev_step_id = _STEP_IDS[completed - 1]
         _log.info(f"Redoing step {prev_step_id}")
-        art = _make_artifact(prev_step_id)
+        art = _make_artifact(iteration, prev_step_id)
         step = IterationStep(
             step_id=prev_step_id,
             status="completed",
@@ -133,7 +227,7 @@ def run_next_step(iteration: Iteration, action: Literal["normal", "skip", "redo"
     # Normal run of next step
     step_id = _STEP_IDS[completed]
     _log.info(f"Running step {step_id}")
-    art = _make_artifact(step_id)
+    art = _make_artifact(iteration, step_id)
     step = IterationStep(
         step_id=step_id,
         status="completed",

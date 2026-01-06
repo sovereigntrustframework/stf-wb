@@ -18,7 +18,7 @@ def test_plugin_registration() -> None:
     """Test registering and unregistering plugins."""
     clear_plugins()
 
-    def custom_s0(step_id: str) -> S0Artifact:
+    def custom_s0(iteration: Iteration, step_id: str) -> S0Artifact:
         """Custom S0 plugin."""
         from stfwb.core.artifact import ArtifactMetadata
 
@@ -45,7 +45,7 @@ def test_plugin_invalid_step_id() -> None:
     """Test that invalid step IDs are rejected."""
     clear_plugins()
 
-    def dummy_plugin(step_id: str) -> S0Artifact:
+    def dummy_plugin(iteration: Iteration, step_id: str) -> S0Artifact:
         from stfwb.core.artifact import S0Artifact, ArtifactMetadata
 
         meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id="dummy")
@@ -62,7 +62,7 @@ def test_runner_uses_plugin() -> None:
     """Test that the runner uses registered plugins."""
     clear_plugins()
 
-    def custom_s0(step_id: str) -> S0Artifact:
+    def custom_s0(iteration: Iteration, step_id: str) -> S0Artifact:
         """Custom S0 plugin."""
         from stfwb.core.artifact import ArtifactMetadata
 
@@ -101,7 +101,7 @@ def test_mixed_plugins_and_defaults() -> None:
     """Test using plugins for some steps and defaults for others."""
     clear_plugins()
 
-    def custom_s3(step_id: str) -> S3Artifact:
+    def custom_s3(iteration: Iteration, step_id: str) -> S3Artifact:
         """Custom S3 plugin."""
         from stfwb.core.artifact import ArtifactMetadata
 
@@ -135,13 +135,13 @@ def test_get_all_plugins() -> None:
     """Test getting all registered plugins."""
     clear_plugins()
 
-    def plugin_s0(step_id: str) -> S0Artifact:
+    def plugin_s0(iteration: Iteration, step_id: str) -> S0Artifact:
         from stfwb.core.artifact import ArtifactMetadata
 
         meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id="p0")
         return S0Artifact(metadata=meta, content={})
 
-    def plugin_s3(step_id: str) -> S3Artifact:
+    def plugin_s3(iteration: Iteration, step_id: str) -> S3Artifact:
         from stfwb.core.artifact import ArtifactMetadata
 
         meta = ArtifactMetadata(kind="s3.a", version="0.2.0", id="p3")
@@ -163,7 +163,7 @@ def test_clear_plugins() -> None:
     """Test clearing all plugins."""
     clear_plugins()
 
-    def dummy_plugin(step_id: str) -> S0Artifact:
+    def dummy_plugin(iteration: Iteration, step_id: str) -> S0Artifact:
         from stfwb.core.artifact import ArtifactMetadata
 
         meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id="d")
