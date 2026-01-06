@@ -61,6 +61,8 @@ target-version = ['py39', 'py310', 'py311']
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP"]
 
 [tool.mypy]
@@ -71,4 +73,4 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=stfwb --cov=stfwb_cli --cov-report=html --cov-report=term-missing"
+addopts = "--cov=stfwb --cov=stfwb_cli --cov-report=html --cov-report=term-missing --cov-fail-under=100"
