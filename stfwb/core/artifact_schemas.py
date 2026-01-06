@@ -20,9 +20,16 @@ class S0Content(BaseModel):
     files: Optional[List[str]] = None
 
 
+class Requirement(BaseModel):
+    id: int
+    text: str
+
+
 class S1Content(BaseModel):
     summary: str = Field(default="requirements normalized")
-    requirements: Optional[List[str]] = None
+    requirements: Optional[List[Requirement]] = None
+    count: int = 0
+    source: Optional[str] = None
 
 
 class S2Content(BaseModel):

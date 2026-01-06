@@ -27,6 +27,7 @@ from stfwb.core.artifact import (
 from stfwb.core.artifact_schemas import (
     S0Content,
     S1Content,
+    Requirement,
     S2Content,
     S3Content,
     S4Content,
@@ -144,6 +145,56 @@ def _default_s0_artifact(iteration: Iteration) -> S0Artifact:
     return S0Artifact(metadata=meta, content=content.model_dump(mode="json"))
 
 
+def _default_s1_artifact(iteration: Iteration) -> S1Artifact:
+    """Generate a default S1 artifact by normalizing requirements from local markdown.
+
+    Rules:
+    - If target_uri is a local path, scan *.md files for lines starting with "REQ:".
+    - Build structured requirements with incremental IDs.
+    - If target_uri is remote or missing, return empty requirements and summary.
+    """
+    now = datetime.now(UTC)
+    meta = ArtifactMetadata(kind="s1.a", version="0.2.0", id=f"s1-{int(now.timestamp())}")
+    target_uri = iteration.metadata.get("target_uri") if iteration.metadata else None
+
+    if not target_uri:
+        return S1Artifact(metadata=meta, content=S1Content().model_dump(mode="json"))
+
+    # Remote URIs: produce empty normalized content
+    if str(target_uri).startswith(("http://", "https://", "git@", "ssh://")):
+        content = S1Content(summary="requirements normalized (remote)", requirements=[], count=0, source=str(target_uri))
+        return S1Artifact(metadata=meta, content=content.model_dump(mode="json"))
+
+    # Local path: scan markdown files
+    base = Path(str(target_uri))
+    if not base.exists():
+        # Mirror S0 behavior: error if local path missing
+        raise FileNotFoundError(f"Target path does not exist: {base}")
+
+    reqs: list[Requirement] = []
+    for root, _dirs, files in os.walk(base):  # type: ignore[name-defined]
+        for name in files:
+            if not name.lower().endswith(".md"):
+                continue
+            full = Path(root, name)
+            try:
+                for line in full.read_text(encoding="utf-8").splitlines():
+                    if line.strip().startswith("REQ:"):
+                        text = line.split("REQ:", 1)[1].strip()
+                        reqs.append(Requirement(id=len(reqs) + 1, text=text))
+            except Exception:
+                # Skip unreadable files
+                continue
+
+    content = S1Content(
+        summary="requirements normalized (local)",
+        requirements=reqs,
+        count=len(reqs),
+        source=str(base),
+    )
+    return S1Artifact(metadata=meta, content=content.model_dump(mode="json"))
+
+
 def _make_artifact(iteration: Iteration, step_id: str) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
     """Create an artifact for a step, using plugin if registered, else default."""
     from stfwb.steps.plugin import get_plugin
@@ -158,8 +209,7 @@ def _make_artifact(iteration: Iteration, step_id: str) -> S0Artifact | S1Artifac
     if step_id == "s0":
         return _default_s0_artifact(iteration)
     if step_id == "s1":
-        meta = ArtifactMetadata(kind="s1.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
-        return S1Artifact(metadata=meta, content=S1Content().model_dump(mode="json"))
+        return _default_s1_artifact(iteration)
     if step_id == "s2":
         meta = ArtifactMetadata(kind="s2.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
         return S2Artifact(metadata=meta, content=S2Content().model_dump(mode="json"))
