@@ -11,7 +11,7 @@ def test_cli_version_and_help():
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "0.1.0-alpha" in result.output
+    assert "0.1.0-beta" in result.output
 
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0

@@ -242,6 +242,14 @@ stfwb publish \
   --iteration-id <iteration-id> \
   --repo owner/repo \
   --token ghp_xxx
+
+Tip: set environment variables to avoid passing credentials each time:
+
+```bash
+export STFWB_GITHUB_TOKEN=ghp_xxx
+export STFWB_GITHUB_REPO=owner/repo
+stfwb publish --iteration-id <iteration-id>
+```
 ```
 
 The command creates a GitHub issue with:

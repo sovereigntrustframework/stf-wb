@@ -13,7 +13,7 @@ def test_console_script_version() -> None:
         cwd=Path(__file__).parent.parent,
     )
     assert result.returncode == 0
-    assert "0.1.0-alpha" in result.stdout
+    assert "0.1.0-beta" in result.stdout
 
 
 def test_console_script_help() -> None:

@@ -19,54 +19,51 @@ Create a new project.
 stfwb project create --name NAME --target-uri URI [--store-dir DIR]
 ```
 
-**Options:**
-- `--name` (required): Project name
-- `--target-uri` (required): Target specification URI
-- `--store-dir`: Local storage directory (default: `.stfwb`)
+## Publish Command
 
-**Example:**
-```bash
-stfwb project create \
-  --name "MyProject" \
-  --target-uri "https://github.com/owner/repo"
-```
-
-### project list
-
-List all projects in the store.
+Publish iteration results to GitHub as issues.
 
 ```bash
-stfwb project list [--store-dir DIR] [--json]
+stfwb publish --iteration-id ID [--repo OWNER/REPO] [--token TOKEN] [--dry-run] [--store-dir DIR]
 ```
 
 **Options:**
-- `--store-dir`: Local storage directory (default: `.stfwb`)
-- `--json`: Output as JSON array
+- `--iteration-id` (required): Iteration ID
+- `--repo`: GitHub repository in format `owner/repo` (falls back to config `github_repo` or `STFWB_GITHUB_REPO`)
+- `--token`: GitHub personal access token with `repo` scope (falls back to config `github_token` or `STFWB_GITHUB_TOKEN`)
+- `--dry-run`: Test without creating GitHub issue (token not required in dry-run)
+- `--store-dir`: Local storage directory (overrides config/env; default is config `store_dir` or `.stfwb`)
 
 **Examples:**
 ```bash
-# Human-readable output
-stfwb project list
-
-# JSON output
-stfwb project list --json
-
-# Custom store
-stfwb project list --store-dir ./my-data
-```
-
-### project show
-
-Show details for a specific project.
-
+# Test publishing (dry-run)
 ```bash
 stfwb project show --id PROJECT_ID [--store-dir DIR] [--json]
 ```
 
 **Options:**
+
+# Use env/config defaults
+export STFWB_GITHUB_TOKEN=ghp_xxx
+export STFWB_GITHUB_REPO=owner/repo
+stfwb publish --iteration-id xyz-456
+
+# Actually publish to GitHub
+stfwb publish \
 - `--id` (required): Project ID
 - `--store-dir`: Local storage directory (default: `.stfwb`)
 - `--json`: Output as JSON object
+```
+
+**Created Issue Format:**
+- **Title**: `Iteration {short-id} - Project {project-id}`
+- **Body**: Markdown with iteration metadata, state, and completed steps with artifacts formatted as JSON code blocks
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Iteration not found or GitHub API error
+
+See [github-integration.md](github-integration.md) for detailed setup guide.
 
 **Examples:**
 ```bash

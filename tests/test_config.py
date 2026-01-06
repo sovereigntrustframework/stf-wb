@@ -14,6 +14,8 @@ def test_config_defaults() -> None:
     cfg = Config()
     assert cfg.store_dir is None
     assert cfg.log_file is None
+    assert cfg.github_token is None
+    assert cfg.github_repo is None
     assert cfg.verbose == 0
     assert cfg.quiet is False
 
@@ -51,6 +53,20 @@ def test_env_var_quiet_false(monkeypatch) -> None:
     monkeypatch.delenv("STFWB_QUIET", raising=False)
     cfg = Config()
     assert cfg.quiet is False
+
+
+def test_env_var_github_token(monkeypatch) -> None:
+    """Test STFWB_GITHUB_TOKEN env var override."""
+    monkeypatch.setenv("STFWB_GITHUB_TOKEN", "ghp_token")
+    cfg = Config()
+    assert cfg.github_token == "ghp_token"
+
+
+def test_env_var_github_repo(monkeypatch) -> None:
+    """Test STFWB_GITHUB_REPO env var override."""
+    monkeypatch.setenv("STFWB_GITHUB_REPO", "owner/repo")
+    cfg = Config()
+    assert cfg.github_repo == "owner/repo"
 
 
 def test_cli_uses_config_defaults(tmp_path: Path, monkeypatch) -> None:
@@ -139,7 +155,9 @@ def test_config_from_yaml_home(tmp_path: Path, monkeypatch) -> None:
     home_stfwb_dir = tmp_path / ".stfwb"
     home_stfwb_dir.mkdir()
     yaml_file = home_stfwb_dir / "stfwb.yaml"
-    yaml_file.write_text("store_dir: /tmp/custom\nverbose: 1\nquiet: false\n")
+    yaml_file.write_text(
+        "store_dir: /tmp/custom\nverbose: 1\nquiet: false\ngithub_token: ghp_yml\ngithub_repo: owner/repo\n"
+    )
 
     # Patch home() to use tmp_path
     import stfwb.utils.config as cfg_module
@@ -154,6 +172,8 @@ def test_config_from_yaml_home(tmp_path: Path, monkeypatch) -> None:
         cfg_module._instance = None
         cfg = cfg_module.get_config()
         assert cfg.store_dir == "/tmp/custom"
+        assert cfg.github_token == "ghp_yml"
+        assert cfg.github_repo == "owner/repo"
         assert cfg.verbose == 1
         assert cfg.quiet is False
     finally:

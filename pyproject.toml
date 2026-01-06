@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "stf-wb"
-version = "0.1.0-alpha"
+version = "0.1.0-beta"
 description = "Reference implementation of STF-Workbench v0.2.0 specification"
 readme = "README.md"
 license = {text = "MIT"}
@@ -13,7 +13,7 @@ authors = [
 ]
 keywords = ["trust", "verification", "specification", "workbench"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",

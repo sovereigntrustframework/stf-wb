@@ -19,6 +19,26 @@ This guide explains how to publish STF-WB iteration results to GitHub issues.
 
 Token format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
+## Configuration and Environment Variables
+
+You can provide GitHub credentials via config file or environment variables.
+
+**Config file (`~/.stfwb/stfwb.yaml` or `./stfwb.yaml`):**
+
+```yaml
+github_token: ghp_xxx
+github_repo: owner/repo
+```
+
+**Environment variables:**
+
+```bash
+export STFWB_GITHUB_TOKEN=ghp_xxx
+export STFWB_GITHUB_REPO=owner/repo
+```
+
+**Precedence:** CLI flags > environment variables > config file.
+
 ## Publishing an Iteration
 
 ### Dry-Run Mode (Recommended First)

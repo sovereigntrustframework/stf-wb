@@ -78,6 +78,7 @@ See [docs/quickstart.md](docs/quickstart.md) for detailed examples and workflows
 - **[GitHub Integration](docs/github-integration.md)** - Publishing to GitHub issues
 - **[Plugin System](docs/plugins.md)** - Customizing step implementations
 - **[Architecture](docs/architecture.md)** - Design and implementation details
+- **[Changelog](CHANGELOG.md)** - Release history
 
 ## Architecture
 

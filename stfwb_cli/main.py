@@ -22,7 +22,7 @@ from stfwb.steps.runner import run_steps
 
 
 @click.group()
-@click.version_option(version="0.1.0-alpha")
+@click.version_option(version="0.1.0-beta")
 @click.option("-v", "verbose", count=True, help="Increase verbosity (-v=INFO, -vv=DEBUG)")
 @click.option("--quiet", "-q", "quiet", is_flag=True, help="Quiet mode (errors only)")
 @click.option(
@@ -755,38 +755,69 @@ def cleanup_archive_to_file(output_file: Path, store_dir: Path, delete_after: bo
 
 @cli.command()
 @click.option("--iteration-id", required=True, help="Iteration ID")
-@click.option("--repo", required=True, help="GitHub repo (owner/repo)")
-@click.option("--token", required=True, help="GitHub PAT token")
+@click.option("--repo", help="GitHub repo (owner/repo). Falls back to config/env.")
+@click.option("--token", help="GitHub PAT token. Falls back to config/env.")
 @click.option("--dry-run", is_flag=True, help="Simulate publishing without making API calls")
 @click.option(
     "--store-dir",
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
-    default=Path(DEFAULT_STORE_DIR),
-    show_default=True,
-    help="Local storage directory",
+    help="Local storage directory (overrides config/env)",
 )
-def publish(iteration_id: str, repo: str, token: str, dry_run: bool, store_dir: Path) -> None:
+@click.pass_context
+def publish(
+    ctx: click.Context,
+    iteration_id: str,
+    repo: str | None,
+    token: str | None,
+    dry_run: bool,
+    store_dir: Path | None,
+) -> None:
     """Publish artifacts to GitHub.
     
     Creates a GitHub issue with iteration details and artifacts.
     Use --dry-run to preview without making actual API calls.
     """
     from stfwb.publishers.github import GitHubPublisher
+    from stfwb.utils.config import get_config
+
+    cfg = ctx.obj.get("config") if ctx.obj else get_config()
+
+    effective_store = store_dir
+    if effective_store is None:
+        effective_store = Path(cfg.store_dir) if cfg and cfg.store_dir else Path(DEFAULT_STORE_DIR)
+
+    effective_repo = repo or (cfg.github_repo if cfg else None)
+    effective_token = token or (cfg.github_token if cfg else None)
 
     try:
-        iteration = load_iteration(iteration_id, store_dir)
+        iteration = load_iteration(iteration_id, effective_store)
     except FileNotFoundError:
-        click.echo(f"Error: Iteration {iteration_id} not found in {store_dir}", err=True)
+        click.echo(f"Error: Iteration {iteration_id} not found in {effective_store}", err=True)
         raise SystemExit(1)
 
     if dry_run:
-        click.echo(f"[DRY RUN] Would publish iteration {iteration_id} to {repo}")
+        target_repo = effective_repo or "(none configured)"
+        click.echo(f"[DRY RUN] Would publish iteration {iteration_id} to {target_repo}")
         click.echo(f"  State: {iteration.state.value}")
         click.echo(f"  Steps: {len(iteration.steps)}")
         return
 
-    click.echo(f"Publishing iteration {iteration_id} to {repo}...")
-    publisher = GitHubPublisher(token=token, repo=repo)
+    if not effective_repo:
+        click.echo(
+            "Error: GitHub repo not provided. Use --repo or set STFWB_GITHUB_REPO or github_repo in config.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if not effective_token:
+        click.echo(
+            "Error: GitHub token not provided. Use --token or set STFWB_GITHUB_TOKEN or github_token in config.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    click.echo(f"Publishing iteration {iteration_id} to {effective_repo}...")
+    publisher = GitHubPublisher(token=effective_token, repo=effective_repo)
     result = publisher.publish(iteration, dry_run=dry_run)
 
     if result["success"]:

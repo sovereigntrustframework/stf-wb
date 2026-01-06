@@ -22,6 +22,8 @@ class Config:
     def __init__(self) -> None:
         self.store_dir: str | None = None
         self.log_file: str | None = None
+        self.github_token: str | None = None
+        self.github_repo: str | None = None
         self.verbose: int = 0
         self.quiet: bool = False
         self._load()
@@ -39,6 +41,10 @@ class Config:
             self.store_dir = yaml_config["store_dir"]
         if yaml_config.get("log_file"):
             self.log_file = yaml_config["log_file"]
+        if yaml_config.get("github_token"):
+            self.github_token = yaml_config["github_token"]
+        if yaml_config.get("github_repo"):
+            self.github_repo = yaml_config["github_repo"]
         if "verbose" in yaml_config:
             self.verbose = int(yaml_config["verbose"])
         if "quiet" in yaml_config:
@@ -49,6 +55,10 @@ class Config:
             self.store_dir = os.getenv("STFWB_STORE_DIR")
         if os.getenv("STFWB_LOG_FILE"):
             self.log_file = os.getenv("STFWB_LOG_FILE")
+        if os.getenv("STFWB_GITHUB_TOKEN"):
+            self.github_token = os.getenv("STFWB_GITHUB_TOKEN")
+        if os.getenv("STFWB_GITHUB_REPO"):
+            self.github_repo = os.getenv("STFWB_GITHUB_REPO")
         if os.getenv("STFWB_VERBOSE"):
             self.verbose = int(os.getenv("STFWB_VERBOSE", "0"))
         if os.getenv("STFWB_QUIET"):

@@ -1,6 +1,6 @@
 """STF-WB: Reference implementation of STF-Workbench v0.2.0 specification."""
 
-__version__ = "0.1.0-alpha"
+__version__ = "0.1.0-beta"
 __author__ = "Sovereign Trust Framework"
 __license__ = "MIT"
 
