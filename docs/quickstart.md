@@ -18,7 +18,7 @@ pip install -e .
 
 ```bash
 stfwb --version
-# Output: stfwb, version 0.1.0-alpha
+# Output: stfwb, version 0.1.0-beta
 
 stfwb --help
 # Shows available commands
@@ -95,6 +95,16 @@ stfwb iteration run --iteration-id <iteration-id>
 ```
 
 Each run advances the iteration to the next state and persists changes.
+
+**Advanced Options:**
+
+```bash
+# Skip running this iteration (doesn't advance state)
+stfwb iteration run --iteration-id <iteration-id> --skip
+
+# Redo work without advancing state (useful for fixing issues)
+stfwb iteration run --iteration-id <iteration-id> --redo
+```
 
 ### 6. Check Iteration Status
 
@@ -174,6 +184,69 @@ stfwb iteration list --json | jq '.[] | select(.state == "in_progress")'
 # Count archived iterations
 stfwb iteration list --json | jq '[.[] | select(.state == "archived")] | length'
 ```
+
+### Exporting and Importing Resources
+
+Export projects and iterations to JSON files for backup, sharing, or migration:
+
+```bash
+# Export a project
+stfwb project export --id <project-id> --output project.json
+
+# Export an iteration
+stfwb iteration export --id <iteration-id> --output iteration.json
+
+# Import a project
+stfwb project import --input project.json
+
+# Import an iteration
+stfwb iteration import --input iteration.json
+```
+
+### Cleanup and Maintenance
+
+Manage archived iterations and storage:
+
+```bash
+# List all archived iterations
+stfwb cleanup archived-iterations
+
+# Delete multiple archived iterations
+stfwb cleanup bulk-delete-iterations \
+  --project-id <project-id> \
+  --state archived \
+  --yes
+
+# Archive iterations to file and optionally delete them
+stfwb cleanup archive-to-file \
+  --output backup.json \
+  --project-id <project-id> \
+  --state frozen \
+  --delete-after
+```
+
+### Publishing to GitHub
+
+Publish iteration results to GitHub issues:
+
+```bash
+# Test publishing without creating an issue (dry-run)
+stfwb publish \
+  --iteration-id <iteration-id> \
+  --repo owner/repo \
+  --token ghp_xxx \
+  --dry-run
+
+# Actually publish to GitHub
+stfwb publish \
+  --iteration-id <iteration-id> \
+  --repo owner/repo \
+  --token ghp_xxx
+```
+
+The command creates a GitHub issue with:
+- Title: "Iteration {short-id} - Project {project-id}"
+- Body: Iteration metadata, state, and all completed steps with artifacts
 
 ## File Structure
 
@@ -322,6 +395,9 @@ stfwb project list | jq '.'
 
 ## Next Steps
 
+- Read [cli-reference.md](cli-reference.md) for complete command documentation
+- See [github-integration.md](github-integration.md) for GitHub publishing guide
+- See [plugins.md](plugins.md) for customizing step implementations
 - Read [architecture.md](architecture.md) for detailed design information
 - Explore the [STF-Workbench v0.2.0 specification](../README.md)
 - Run tests: `pytest`

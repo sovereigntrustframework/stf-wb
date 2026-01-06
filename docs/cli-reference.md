@@ -137,6 +137,49 @@ stfwb project delete --id abc-123 --yes
 - `0`: Success or aborted
 - `1`: Project not found
 
+### project export
+
+Export a project to a JSON file.
+
+```bash
+stfwb project export --id PROJECT_ID --output FILE [--store-dir DIR]
+```
+
+**Options:**
+- `--id` (required): Project ID
+- `--output` (required): Output file path
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Example:**
+```bash
+stfwb project export --id abc-123 --output project-backup.json
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Project not found
+
+### project import
+
+Import a project from a JSON file.
+
+```bash
+stfwb project import --input FILE [--store-dir DIR]
+```
+
+**Options:**
+- `--input` (required): Input file path
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Example:**
+```bash
+stfwb project import --input project-backup.json
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Invalid JSON or file not found
+
 ## Iteration Commands
 
 ### iteration create
@@ -211,12 +254,14 @@ stfwb iteration show --id xyz-456-uuid --json
 Execute iteration state transition.
 
 ```bash
-stfwb iteration run --iteration-id ITERATION_ID [--store-dir DIR]
+stfwb iteration run --iteration-id ITERATION_ID [--store-dir DIR] [--skip] [--redo]
 ```
 
 **Options:**
 - `--iteration-id` (required): Iteration ID
 - `--store-dir`: Local storage directory (default: `.stfwb`)
+- `--skip`: Skip this iteration without advancing state
+- `--redo`: Redo work without advancing state
 
 **Behavior:**
 Each invocation advances the iteration through one state transition:
@@ -224,6 +269,10 @@ Each invocation advances the iteration through one state transition:
 2. `in_progress` → `frozen`
 3. `frozen` → `archived`
 4. `archived`: No change (already final state)
+
+With `--skip` or `--redo`: State is not advanced. Useful for:
+- **--skip**: Temporarily bypass an iteration in a workflow
+- **--redo**: Retry work in current state (e.g., after fixing issues)
 
 **Examples:**
 ```bash
@@ -235,11 +284,17 @@ stfwb iteration run --iteration-id xyz-456
 
 # Third run: frozen → archived
 stfwb iteration run --iteration-id xyz-456
+
+# Skip without advancing state
+stfwb iteration run --iteration-id xyz-456 --skip
+
+# Redo work in current state
+stfwb iteration run --iteration-id xyz-456 --redo
 ```
 
 **Exit Codes:**
 - `0`: Success
-- `1`: Iteration not found
+- `1`: Iteration not found or both --skip and --redo specified
 
 ### iteration update
 
@@ -289,26 +344,180 @@ stfwb iteration delete --id xyz-456 --yes
 - `0`: Success or aborted
 - `1`: Iteration not found
 
-## Publish Command
+### iteration export
 
-Publish artifacts to GitHub (planned feature).
+Export an iteration to a JSON file.
 
 ```bash
-stfwb publish --iteration-id ID --repo OWNER/REPO --token TOKEN
+stfwb iteration export --id ITERATION_ID --output FILE [--store-dir DIR]
+```
+
+**Options:**
+- `--id` (required): Iteration ID
+- `--output` (required): Output file path
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Example:**
+```bash
+stfwb iteration export --id xyz-456 --output iteration-backup.json
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Iteration not found
+
+### iteration import
+
+Import an iteration from a JSON file.
+
+```bash
+stfwb iteration import --input FILE [--store-dir DIR]
+```
+
+**Options:**
+- `--input` (required): Input file path
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Example:**
+```bash
+stfwb iteration import --input iteration-backup.json
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Invalid JSON or file not found
+
+## Cleanup Commands
+
+Maintenance commands for managing iterations and storage.
+
+### cleanup archived-iterations
+
+List all archived iterations.
+
+```bash
+stfwb cleanup archived-iterations [--store-dir DIR]
+```
+
+**Options:**
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Example:**
+```bash
+stfwb cleanup archived-iterations
+```
+
+### cleanup bulk-delete-iterations
+
+Delete multiple iterations matching filter criteria.
+
+```bash
+stfwb cleanup bulk-delete-iterations [--project-id ID] [--state STATE] [--yes] [--store-dir DIR]
+```
+
+**Options:**
+- `--project-id`: Filter by project ID
+- `--state`: Filter by state (created, in_progress, frozen, archived)
+- `--yes`, `-y`: Skip confirmation prompt
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Examples:**
+```bash
+# Delete all archived iterations for a project
+stfwb cleanup bulk-delete-iterations \
+  --project-id abc-123 \
+  --state archived \
+  --yes
+
+# Delete all frozen iterations (with confirmation)
+stfwb cleanup bulk-delete-iterations --state frozen
+
+# Delete all iterations for a project
+stfwb cleanup bulk-delete-iterations --project-id abc-123 --yes
+```
+
+**Exit Codes:**
+- `0`: Success or aborted
+- `1`: No iterations matched filter
+
+### cleanup archive-to-file
+
+Export iterations to a file and optionally delete them.
+
+```bash
+stfwb cleanup archive-to-file --output FILE [--project-id ID] [--state STATE] [--delete-after] [--store-dir DIR]
+```
+
+**Options:**
+- `--output` (required): Output file path
+- `--project-id`: Filter by project ID
+- `--state`: Filter by state (created, in_progress, frozen, archived)
+- `--delete-after`: Delete iterations after exporting
+- `--store-dir`: Local storage directory (default: `.stfwb`)
+
+**Examples:**
+```bash
+# Archive frozen iterations to file
+stfwb cleanup archive-to-file \
+  --output frozen-backup.json \
+  --state frozen
+
+# Archive and delete archived iterations
+stfwb cleanup archive-to-file \
+  --output archived-cleanup.json \
+  --state archived \
+  --delete-after
+
+# Archive all iterations for a project
+stfwb cleanup archive-to-file \
+  --output project-abc-archive.json \
+  --project-id abc-123
+```
+
+**Exit Codes:**
+- `0`: Success
+- `1`: No iterations matched filter
+
+## Publish Command
+
+Publish iteration results to GitHub as issues.
+
+```bash
+stfwb publish --iteration-id ID --repo OWNER/REPO --token TOKEN [--dry-run] [--store-dir DIR]
 ```
 
 **Options:**
 - `--iteration-id` (required): Iteration ID
-- `--repo` (required): GitHub repository (owner/repo)
-- `--token` (required): GitHub personal access token
+- `--repo` (required): GitHub repository in format `owner/repo`
+- `--token` (required): GitHub personal access token with `repo` scope
+- `--dry-run`: Test without creating GitHub issue
+- `--store-dir`: Local storage directory (default: `.stfwb`)
 
-**Example:**
+**Examples:**
 ```bash
+# Test publishing (dry-run)
+stfwb publish \
+  --iteration-id xyz-456 \
+  --repo owner/repo \
+  --token ghp_xxx \
+  --dry-run
+
+# Actually publish to GitHub
 stfwb publish \
   --iteration-id xyz-456 \
   --repo owner/repo \
   --token ghp_xxx
 ```
+
+**Created Issue Format:**
+- **Title**: `Iteration {short-id} - Project {project-id}`
+- **Body**: Markdown with iteration metadata, state, and completed steps with artifacts formatted as JSON code blocks
+
+**Exit Codes:**
+- `0`: Success
+- `1`: Iteration not found or GitHub API error
+
+See [github-integration.md](github-integration.md) for detailed setup guide.
 
 ## Exit Codes
 
