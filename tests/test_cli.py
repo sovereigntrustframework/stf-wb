@@ -26,14 +26,35 @@ def test_cli_project_create():
 
 
 def test_cli_iteration_commands():
-    runner = CliRunner()
-    result = runner.invoke(cli, ["iteration", "create", "--project-id", "p1"])
-    assert result.exit_code == 0
-    assert "Creating iteration for project p1" in result.output
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
 
-    result = runner.invoke(cli, ["iteration", "run", "--iteration-id", "i1"])
-    assert result.exit_code == 0
-    assert "Running iteration i1" in result.output
+    runner = CliRunner()
+    with TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        # Create an iteration first
+        create_result = runner.invoke(
+            cli,
+            ["iteration", "create", "--project-id", "p1", "--store-dir", str(tmp_path)],
+        )
+        assert create_result.exit_code == 0
+        assert "Creating iteration for project p1" in create_result.output
+
+        # Extract iteration ID from output
+        import re
+
+        match = re.search(r"Created iteration ([0-9a-f\-]+)", create_result.output)
+        assert match is not None
+        iteration_id = match.group(1)
+
+        # Run the iteration
+        run_result = runner.invoke(
+            cli,
+            ["iteration", "run", "--iteration-id", iteration_id, "--store-dir", str(tmp_path)],
+        )
+        assert run_result.exit_code == 0
+        assert f"Running iteration {iteration_id}" in run_result.output
+        assert "Starting iteration..." in run_result.output
 
 
 def test_cli_publish_command():

@@ -17,19 +17,34 @@ STF-WB is the reference implementation of the Sovereign Trust Framework Workbenc
 ## Quick Start
 
 ```bash
-# Install
-pip install stf-wb
+# Install from source
+git clone https://github.com/sovereigntrustframework/stf-wb.git
+cd stf-wb
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
 
 # Create a project
-stfwb project create --name "hello-world" --target-uri "https://example.org/hello-world-v1.0.md"
+stfwb project create --name "hello-world" --target-uri "https://example.org/spec.md"
 
-# Create and run an iteration
-stfwb iteration create --project hello-world
-stfwb iteration run --iteration <iteration-id>
+# Create an iteration
+stfwb iteration create --project-id <project-id>
 
-# Publish artifacts to GitHub
-stfwb publish-artifacts --iteration <iteration-id> --repo owner/repo --token <PAT>
+# Run iteration through states (created → in_progress → frozen → archived)
+stfwb iteration run --iteration-id <iteration-id>
+
+# List and view resources
+stfwb project list
+stfwb iteration show --id <iteration-id> --json
 ```
+
+See [docs/quickstart.md](docs/quickstart.md) for detailed examples and workflows.
+
+## Documentation
+
+- **[Quickstart Guide](docs/quickstart.md)** - Installation, basic usage, and examples
+- **[CLI Reference](docs/cli-reference.md)** - Complete command-line documentation
+- **[Architecture](docs/architecture.md)** - Design and implementation details
 
 ## Architecture
 

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
 from stfwb.core.schemas import JsonObject
 
 
@@ -27,8 +28,8 @@ class Project(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update time")
 
     def to_dict(self) -> JsonObject:
-        """Serialize project to dictionary."""
-        return self.model_dump()
+        """Serialize project to a JSON-serializable dictionary."""
+        return self.model_dump(mode="json")
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Project":

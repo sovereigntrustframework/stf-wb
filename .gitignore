@@ -39,3 +39,4 @@ venv.bak/
 runs/
 artifacts/
 .env.local
+.stfwb/

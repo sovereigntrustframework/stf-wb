@@ -1,7 +1,7 @@
 """Tests for stfwb.utils.coverage module."""
 
-from stfwb.utils.coverage import Coverage
 from stfwb.core.types import CoverageUnit
+from stfwb.utils.coverage import Coverage
 
 
 def test_coverage_percentage_zero_total():

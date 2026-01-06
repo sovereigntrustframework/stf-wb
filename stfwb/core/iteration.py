@@ -6,8 +6,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from stfwb.core.types import IterationState
 from stfwb.core.schemas import JsonObject
+from stfwb.core.types import IterationState
 
 
 class IterationStep(BaseModel):
@@ -48,8 +48,8 @@ class Iteration(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update time")
 
     def to_dict(self) -> JsonObject:
-        """Serialize iteration to dictionary."""
-        return self.model_dump()
+        """Serialize iteration to a JSON-serializable dictionary."""
+        return self.model_dump(mode="json")
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Iteration":

@@ -1,9 +1,10 @@
 """Artifact models (S0.A through S5.A) from STF-Workbench v0.2.0 Section 6.5."""
 
 from datetime import UTC, datetime
-from stfwb.core.schemas import JsonObject
 
 from pydantic import BaseModel, Field
+
+from stfwb.core.schemas import JsonObject
 
 
 class ArtifactMetadata(BaseModel):
@@ -25,8 +26,8 @@ class Artifact(BaseModel):
     content: JsonObject = Field(default_factory=dict, description="Artifact content")
 
     def to_dict(self) -> JsonObject:
-        """Serialize artifact to dictionary."""
-        return self.model_dump()
+        """Serialize artifact to a JSON-serializable dictionary."""
+        return self.model_dump(mode="json")
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Artifact":

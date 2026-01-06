@@ -10,7 +10,9 @@ class TestProject:
 
     def test_create_project(self):
         """Test creating a project."""
-        project = Project(name="hello-world", target_uri="https://example.org/hello-world-v1.0.md")  # pyright: ignore[reportCallIssue]
+        project = Project(
+            name="hello-world", target_uri="https://example.org/hello-world-v1.0.md"
+        )  # pyright: ignore[reportCallIssue]
         assert project.name == "hello-world"
         assert project.target_uri == "https://example.org/hello-world-v1.0.md"
         assert project.id is not None
@@ -19,7 +21,9 @@ class TestProject:
 
     def test_project_serialization(self):
         """Test serializing project to dict."""
-        project = Project(name="test", target_uri="https://example.org/test.md")  # pyright: ignore[reportCallIssue]
+        project = Project(
+            name="test", target_uri="https://example.org/test.md"
+        )  # pyright: ignore[reportCallIssue]
         data = project.to_dict()
         assert data["name"] == "test"
         assert data["kind"] == "project"
