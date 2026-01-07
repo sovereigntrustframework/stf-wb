@@ -6,7 +6,7 @@ Publishes iteration artifacts to GitHub as issues, comments, and pull requests.
 from __future__ import annotations
 
 import json
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import requests
 

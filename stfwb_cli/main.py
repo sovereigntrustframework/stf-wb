@@ -5,12 +5,11 @@ from typing import Literal
 
 import click
 
+from stfwb.steps.runner import run_steps
 from stfwb.utils.storage import (
     DEFAULT_STORE_DIR,
     delete_iteration,
     delete_project,
-    list_iteration_ids,
-    list_project_ids,
     load_all_iterations,
     load_all_projects,
     load_iteration,
@@ -18,7 +17,6 @@ from stfwb.utils.storage import (
     save_iteration,
     save_project,
 )
-from stfwb.steps.runner import run_steps
 
 
 @click.group()
@@ -110,7 +108,9 @@ def project_create(
     # Use provided store-dir or fall back to config
     if store_dir is None:
         cfg = ctx.obj.get("config") if ctx.obj else None  # pragma: no cover
-        store_dir = Path(cfg.store_dir) if cfg and cfg.store_dir else Path(DEFAULT_STORE_DIR)  # pragma: no cover
+        store_dir = (
+            Path(cfg.store_dir) if cfg and cfg.store_dir else Path(DEFAULT_STORE_DIR)
+        )  # pragma: no cover
 
     level = _get_log_level(ctx, verbose or None, quiet or None)
     log_file = ctx.obj.get("log_file") if ctx.obj else None
@@ -192,7 +192,9 @@ def project_show(project_id: str, store_dir: Path, output_json: bool) -> None:
     show_default=True,
     help="Local storage directory",
 )
-def project_update(project_id: str, name: str | None, target_uri: str | None, store_dir: Path) -> None:
+def project_update(
+    project_id: str, name: str | None, target_uri: str | None, store_dir: Path
+) -> None:
     """Update a project's details."""
     try:
         proj = load_project(project_id, store_dir)
@@ -309,7 +311,9 @@ def iteration_create(
     help="Filter by state",
 )
 @click.option("--project-id", "filter_project_id", help="Filter by project ID")
-def iteration_list(store_dir: Path, output_json: bool, state_value: str | None, filter_project_id: str | None) -> None:
+def iteration_list(
+    store_dir: Path, output_json: bool, state_value: str | None, filter_project_id: str | None
+) -> None:
     """List iterations in the store."""
     import json
 
@@ -390,7 +394,10 @@ def iteration_update(iteration_id: str, state_value: str | None, store_dir: Path
     try:
         new_state = IterationState(state_value)
     except ValueError:
-        click.echo(f"Error: Invalid state '{state_value}'. Valid: created, in_progress, frozen, archived", err=True)
+        click.echo(
+            f"Error: Invalid state '{state_value}'. Valid: created, in_progress, frozen, archived",
+            err=True,
+        )
         raise SystemExit(1)
 
     it.state = new_state
@@ -571,7 +578,7 @@ def iteration_run(
     redo: bool,
 ) -> None:
     """Run iteration (S0→S1→S2→S3→S4→S5).
-    
+
     By default, advances to the next step. Use --skip to skip the next step
     without executing it, or --redo to rerun the last completed step.
     """
@@ -782,7 +789,7 @@ def publish(
     store_dir: Path | None,
 ) -> None:
     """Publish artifacts to GitHub.
-    
+
     Creates a GitHub issue with iteration details and artifacts.
     Use --dry-run to preview without making actual API calls.
     """
@@ -834,5 +841,3 @@ def publish(
     else:
         click.echo(f"✗ Failed to publish: {result['error']}", err=True)
         raise SystemExit(1)
-
-

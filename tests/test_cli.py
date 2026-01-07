@@ -63,11 +63,11 @@ def test_cli_publish_command(tmp_path: Path):
     """Test publish command with dry-run."""
     from stfwb.core.iteration import Iteration
     from stfwb.utils.storage import save_iteration
-    
+
     # Create an iteration to publish
     it = Iteration(project_id="p1")
     save_iteration(it, tmp_path)
-    
+
     runner = CliRunner()
     result = runner.invoke(
         cli,

@@ -6,15 +6,22 @@ step implementations. Plugins can generate custom artifacts for any step.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol
+from typing import Protocol
 
-from stfwb.core.artifact import S0Artifact, S1Artifact, S2Artifact, S3Artifact, S4Artifact, S5Artifact
+from stfwb.core.artifact import (
+    S0Artifact,
+    S1Artifact,
+    S2Artifact,
+    S3Artifact,
+    S4Artifact,
+    S5Artifact,
+)
 from stfwb.core.iteration import Iteration
 
 
 class StepPlugin(Protocol):
     """Protocol for step plugins.
-    
+
     A plugin is a callable that takes the iteration and step ID and returns an artifact.
     """
 
@@ -30,7 +37,7 @@ _plugins: dict[str, StepPlugin] = {}
 
 def register_plugin(step_id: str, plugin: StepPlugin) -> None:
     """Register a custom step plugin.
-    
+
     Args:
         step_id: Step identifier (s0-s5)
         plugin: Callable that generates an artifact for the step
@@ -42,7 +49,7 @@ def register_plugin(step_id: str, plugin: StepPlugin) -> None:
 
 def unregister_plugin(step_id: str) -> None:
     """Unregister a custom step plugin.
-    
+
     Args:
         step_id: Step identifier (s0-s5)
     """
@@ -51,10 +58,10 @@ def unregister_plugin(step_id: str) -> None:
 
 def get_plugin(step_id: str) -> StepPlugin | None:
     """Get a registered plugin for a step.
-    
+
     Args:
         step_id: Step identifier (s0-s5)
-        
+
     Returns:
         The plugin if registered, None otherwise
     """
@@ -63,10 +70,10 @@ def get_plugin(step_id: str) -> StepPlugin | None:
 
 def has_plugin(step_id: str) -> bool:
     """Check if a plugin is registered for a step.
-    
+
     Args:
         step_id: Step identifier (s0-s5)
-        
+
     Returns:
         True if a plugin is registered, False otherwise
     """

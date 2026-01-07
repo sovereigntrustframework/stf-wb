@@ -6,7 +6,6 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from stfwb.core.iteration import Iteration
-from stfwb.core.types import IterationState
 from stfwb.utils.storage import load_all_iterations, save_iteration
 from stfwb_cli.main import cli
 

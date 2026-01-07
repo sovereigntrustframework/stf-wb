@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from stfwb.core.iteration import Iteration
 from stfwb.steps.runner import run_next_step

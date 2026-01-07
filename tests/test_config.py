@@ -1,11 +1,10 @@
 """Tests for config file and environment variable support."""
 
-import os
 from pathlib import Path
 
 from click.testing import CliRunner
 
-from stfwb.utils.config import Config, get_config
+from stfwb.utils.config import Config
 from stfwb_cli.main import cli
 
 
@@ -232,6 +231,7 @@ def test_iteration_create_without_store_dir(tmp_path: Path, monkeypatch) -> None
     assert res.exit_code == 0
     # Verify it went to default location
     from pathlib import Path as P
+
     from stfwb.utils.storage import DEFAULT_STORE_DIR
 
     default_path = P(DEFAULT_STORE_DIR) / "iterations"

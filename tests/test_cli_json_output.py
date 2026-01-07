@@ -42,7 +42,9 @@ def test_project_list_json_with_data(tmp_path: Path) -> None:
 
 def test_project_show_json(tmp_path: Path) -> None:
     """Test project show --json."""
-    proj = Project(name="demo", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="demo", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()

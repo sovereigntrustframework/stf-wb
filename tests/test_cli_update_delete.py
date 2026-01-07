@@ -18,7 +18,9 @@ from stfwb_cli.main import cli
 
 def test_project_update_name(tmp_path: Path) -> None:
     """Test updating project name."""
-    proj = Project(name="old_name", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="old_name", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()
@@ -100,7 +102,9 @@ def test_project_update_both(tmp_path: Path) -> None:
 
 def test_project_update_no_changes(tmp_path: Path) -> None:
     """Test project update with no changes specified."""
-    proj = Project(name="demo", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="demo", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()
@@ -141,7 +145,9 @@ def test_project_update_not_found(tmp_path: Path) -> None:
 
 def test_project_delete_with_yes(tmp_path: Path) -> None:
     """Test deleting project with --yes flag."""
-    proj = Project(name="demo", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="demo", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()
@@ -170,7 +176,9 @@ def test_project_delete_with_yes(tmp_path: Path) -> None:
 
 def test_project_delete_with_confirmation(tmp_path: Path) -> None:
     """Test deleting project with confirmation prompt."""
-    proj = Project(name="demo", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="demo", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()
@@ -193,7 +201,9 @@ def test_project_delete_with_confirmation(tmp_path: Path) -> None:
 
 def test_project_delete_abort(tmp_path: Path) -> None:
     """Test aborting project deletion."""
-    proj = Project(name="demo", target_uri="https://example.org")  # pyright: ignore[reportCallIssue]
+    proj = Project(
+        name="demo", target_uri="https://example.org"
+    )  # pyright: ignore[reportCallIssue]
     save_project(proj, tmp_path)
 
     runner = CliRunner()

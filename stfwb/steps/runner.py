@@ -6,14 +6,14 @@ results to `Iteration.steps` with timestamps and statuses.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import hashlib
 import os
 import shutil
 import subprocess
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Final, List, Literal
+from typing import Final, Literal
 
 from stfwb.core.artifact import (
     ArtifactMetadata,
@@ -25,9 +25,9 @@ from stfwb.core.artifact import (
     S5Artifact,
 )
 from stfwb.core.artifact_schemas import (
+    Requirement,
     S0Content,
     S1Content,
-    Requirement,
     S2Content,
     S3Content,
     S4Content,
@@ -36,7 +36,7 @@ from stfwb.core.artifact_schemas import (
 from stfwb.core.iteration import Iteration, IterationStep
 from stfwb.utils.logging import get_logger
 
-_STEP_IDS: Final[List[str]] = ["s0", "s1", "s2", "s3", "s4", "s5"]
+_STEP_IDS: Final[list[str]] = ["s0", "s1", "s2", "s3", "s4", "s5"]
 _log = get_logger("stfwb.runner")
 
 
@@ -163,7 +163,12 @@ def _default_s1_artifact(iteration: Iteration) -> S1Artifact:
 
     # Remote URIs: produce empty normalized content
     if str(target_uri).startswith(("http://", "https://", "git@", "ssh://")):
-        content = S1Content(summary="requirements normalized (remote)", requirements=[], count=0, source=str(target_uri))
+        content = S1Content(
+            summary="requirements normalized (remote)",
+            requirements=[],
+            count=0,
+            source=str(target_uri),
+        )
         return S1Artifact(metadata=meta, content=content.model_dump(mode="json"))
 
     # Local path: scan markdown files
@@ -201,7 +206,9 @@ def _default_s1_artifact(iteration: Iteration) -> S1Artifact:
     return S1Artifact(metadata=meta, content=content.model_dump(mode="json"))
 
 
-def _make_artifact(iteration: Iteration, step_id: str) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
+def _make_artifact(
+    iteration: Iteration, step_id: str
+) -> S0Artifact | S1Artifact | S2Artifact | S3Artifact | S4Artifact | S5Artifact:
     """Create an artifact for a step, using plugin if registered, else default."""
     from stfwb.steps.plugin import get_plugin
 
@@ -217,21 +224,28 @@ def _make_artifact(iteration: Iteration, step_id: str) -> S0Artifact | S1Artifac
     if step_id == "s1":
         return _default_s1_artifact(iteration)
     if step_id == "s2":
-        meta = ArtifactMetadata(kind="s2.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
+        meta = ArtifactMetadata(
+            kind="s2.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}"
+        )
         return S2Artifact(metadata=meta, content=S2Content().model_dump(mode="json"))
     if step_id == "s3":
-        meta = ArtifactMetadata(kind="s3.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
+        meta = ArtifactMetadata(
+            kind="s3.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}"
+        )
         return S3Artifact(metadata=meta, content=S3Content().model_dump(mode="json"))
     if step_id == "s4":
-        meta = ArtifactMetadata(kind="s4.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
+        meta = ArtifactMetadata(
+            kind="s4.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}"
+        )
         return S4Artifact(metadata=meta, content=S4Content().model_dump(mode="json"))
     # s5
     meta = ArtifactMetadata(kind="s5.a", version="0.2.0", id=f"{step_id}-{int(now.timestamp())}")
     return S5Artifact(metadata=meta, content=S5Content().model_dump(mode="json"))
 
 
-
-def run_next_step(iteration: Iteration, action: Literal["normal", "skip", "redo"] = "normal") -> IterationStep | None:
+def run_next_step(
+    iteration: Iteration, action: Literal["normal", "skip", "redo"] = "normal"
+) -> IterationStep | None:
     """Run the next step in S0→S5 sequence.
 
     Adds a new `IterationStep` with status 'completed', timestamps,
@@ -296,7 +310,9 @@ def run_next_step(iteration: Iteration, action: Literal["normal", "skip", "redo"
     return step
 
 
-def run_steps(iteration: Iteration, count: int, action: Literal["normal", "skip", "redo"] = "normal") -> list[IterationStep]:
+def run_steps(
+    iteration: Iteration, count: int, action: Literal["normal", "skip", "redo"] = "normal"
+) -> list[IterationStep]:
     """Run up to `count` next steps, stopping when S5 is completed.
 
     Action applies to each execution: "normal" (default), "skip", or "redo".

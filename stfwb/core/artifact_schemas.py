@@ -6,18 +6,16 @@ while remaining JSON-serializable via `model_dump(mode="json")`.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class S0Content(BaseModel):
     summary: str = Field(default="source snapshot")
-    source_uri: Optional[str] = None
-    snapshot_time: Optional[str] = None
-    commit: Optional[str] = None
-    tree_hash: Optional[str] = None
-    files: Optional[List[str]] = None
+    source_uri: str | None = None
+    snapshot_time: str | None = None
+    commit: str | None = None
+    tree_hash: str | None = None
+    files: list[str] | None = None
 
 
 class Requirement(BaseModel):
@@ -27,14 +25,14 @@ class Requirement(BaseModel):
 
 class S1Content(BaseModel):
     summary: str = Field(default="requirements normalized")
-    requirements: Optional[List[Requirement]] = None
+    requirements: list[Requirement] | None = None
     count: int = 0
-    source: Optional[str] = None
+    source: str | None = None
 
 
 class S2Content(BaseModel):
     summary: str = Field(default="protocol spec")
-    modules: Optional[List[str]] = None
+    modules: list[str] | None = None
 
 
 class S3Check(BaseModel):
@@ -45,16 +43,16 @@ class S3Check(BaseModel):
 class S3Content(BaseModel):
     summary: str = Field(default="model checking results")
     passed: bool = False
-    checks: Optional[List[S3Check]] = None
+    checks: list[S3Check] | None = None
 
 
 class S4Content(BaseModel):
     summary: str = Field(default="evidence coverage")
     coverage: float = 0.0
-    metrics: Optional[Dict[str, float]] = None
+    metrics: dict[str, float] | None = None
 
 
 class S5Content(BaseModel):
     summary: str = Field(default="gate decision")
     decision: str = Field(default="undecided")
-    reason: Optional[str] = None
+    reason: str | None = None

@@ -111,6 +111,7 @@ def test_iteration_run_already_archived(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "already in final state: archived" in result.output
 
+
 def test_iteration_run_skip(tmp_path: Path) -> None:
     """Test iteration run with --skip flag on CREATED iteration."""
     from stfwb.core.iteration import Iteration
@@ -190,7 +191,6 @@ def test_iteration_run_redo(tmp_path: Path) -> None:
     assert reloaded.state == IterationState.FROZEN
 
 
-
 def test_iteration_run_skip_and_redo_error(tmp_path: Path) -> None:
     """Test iteration run with both --skip and --redo raises error."""
     from stfwb.core.iteration import Iteration
@@ -202,7 +202,16 @@ def test_iteration_run_skip_and_redo_error(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["iteration", "run", "--iteration-id", it.id, "--store-dir", str(tmp_path), "--skip", "--redo"],
+        [
+            "iteration",
+            "run",
+            "--iteration-id",
+            it.id,
+            "--store-dir",
+            str(tmp_path),
+            "--skip",
+            "--redo",
+        ],
     )
     assert result.exit_code == 1
     assert "Cannot use both --skip and --redo" in result.output

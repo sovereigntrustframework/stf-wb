@@ -24,7 +24,16 @@ def test_project_export(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["project", "export", "--id", proj.id, "--output", str(export_file), "--store-dir", str(tmp_path)],
+        [
+            "project",
+            "export",
+            "--id",
+            proj.id,
+            "--output",
+            str(export_file),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 0
     assert f"Exported project {proj.id}" in result.output
@@ -80,7 +89,16 @@ def test_iteration_export(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["iteration", "export", "--id", it.id, "--output", str(export_file), "--store-dir", str(tmp_path)],
+        [
+            "iteration",
+            "export",
+            "--id",
+            it.id,
+            "--output",
+            str(export_file),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 0
     assert f"Exported iteration {it.id}" in result.output
@@ -131,7 +149,16 @@ def test_project_export_not_found(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["project", "export", "--id", "nonexistent", "--output", str(export_file), "--store-dir", str(tmp_path)],
+        [
+            "project",
+            "export",
+            "--id",
+            "nonexistent",
+            "--output",
+            str(export_file),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 1
     assert "not found" in result.output
@@ -143,7 +170,16 @@ def test_iteration_export_not_found(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["iteration", "export", "--id", "nonexistent", "--output", str(export_file), "--store-dir", str(tmp_path)],
+        [
+            "iteration",
+            "export",
+            "--id",
+            "nonexistent",
+            "--output",
+            str(export_file),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 1
     assert "not found" in result.output
@@ -154,7 +190,14 @@ def test_project_import_nonexistent_file(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["project", "import", "--file", str(tmp_path / "nonexistent.json"), "--store-dir", str(tmp_path)],
+        [
+            "project",
+            "import",
+            "--file",
+            str(tmp_path / "nonexistent.json"),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code != 0
 
@@ -164,6 +207,13 @@ def test_iteration_import_nonexistent_file(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["iteration", "import", "--file", str(tmp_path / "nonexistent.json"), "--store-dir", str(tmp_path)],
+        [
+            "iteration",
+            "import",
+            "--file",
+            str(tmp_path / "nonexistent.json"),
+            "--store-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code != 0

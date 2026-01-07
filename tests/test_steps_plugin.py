@@ -1,7 +1,6 @@
 """Tests for the step plugin system."""
 
 from stfwb.core.artifact import S0Artifact, S3Artifact
-from stfwb.core.artifact_schemas import S0Content, S3Content
 from stfwb.core.iteration import Iteration
 from stfwb.steps.plugin import (
     clear_plugins,
@@ -46,7 +45,7 @@ def test_plugin_invalid_step_id() -> None:
     clear_plugins()
 
     def dummy_plugin(iteration: Iteration, step_id: str) -> S0Artifact:
-        from stfwb.core.artifact import S0Artifact, ArtifactMetadata
+        from stfwb.core.artifact import ArtifactMetadata, S0Artifact
 
         meta = ArtifactMetadata(kind="s0.a", version="0.2.0", id="dummy")
         return S0Artifact(metadata=meta, content={})

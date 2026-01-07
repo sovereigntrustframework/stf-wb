@@ -1,8 +1,9 @@
 """Tests for S1 default implementation (requirements normalization)."""
 
 from pathlib import Path
+
 from stfwb.core.iteration import Iteration
-from stfwb.steps.runner import run_steps, run_next_step
+from stfwb.steps.runner import run_next_step
 
 
 def test_s1_local_requirements(tmp_path: Path) -> None:
@@ -77,7 +78,7 @@ def test_s1_skips_unreadable_file(tmp_path: Path, monkeypatch) -> None:
 
     def fake_read(self, *args, **kwargs):  # type: ignore[override]
         if self.name == "bad.md":
-            raise IOError("simulated unreadable file")
+            raise OSError("simulated unreadable file")
         return original_read(self, *args, **kwargs)
 
     monkeypatch.setattr(Path, "read_text", fake_read)

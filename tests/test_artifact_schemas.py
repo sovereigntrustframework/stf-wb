@@ -2,8 +2,6 @@
 
 from stfwb.core.artifact_schemas import (
     S0Content,
-    S1Content,
-    S2Content,
     S3Check,
     S3Content,
     S4Content,
