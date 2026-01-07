@@ -116,7 +116,7 @@ def project_create(
     log_file = ctx.obj.get("log_file") if ctx.obj else None
     setup_logging(level, log_file)  # type: ignore[arg-type]
 
-    project = Project(name=name, target_uri=target_uri)  # pyright: ignore[reportCallIssue]
+    project = Project(name=name, target_uri=target_uri)  # type: ignore[call-arg]
     click.echo(f"Creating project '{name}' targeting {target_uri}")
     out_path = save_project(project, store_dir)
     click.echo(f"Created project '{name}' (id={project.id}) at {out_path}")
@@ -286,8 +286,8 @@ def iteration_create(
         # Allow iteration creation without existing project (legacy behavior)
         proj = None
 
-    meta = {"target_uri": proj.target_uri} if proj else {}
-    iteration = Iteration(project_id=project_id, metadata=meta)  # pyright: ignore[reportCallIssue]
+    meta: dict[str, object] = {"target_uri": proj.target_uri} if proj else {}
+    iteration = Iteration(project_id=project_id, metadata=meta)  # type: ignore[call-arg]
     click.echo(f"Creating iteration for project {project_id}")
     out_path = save_iteration(iteration, store_dir)
     click.echo(f"Created iteration {iteration.id} for project {project_id} at {out_path}")

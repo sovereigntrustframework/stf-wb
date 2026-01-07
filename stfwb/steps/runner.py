@@ -137,10 +137,10 @@ def _default_s0_artifact(iteration: Iteration) -> S0Artifact:
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    if target_uri.startswith(("http://", "https://", "git@", "ssh://")):
-        content = _content_from_git(target_uri)
+    if str(target_uri).startswith(("http://", "https://", "git@", "ssh://")):
+        content = _content_from_git(str(target_uri))
     else:
-        content = _content_from_local(Path(target_uri))
+        content = _content_from_local(Path(str(target_uri)))
 
     return S0Artifact(metadata=meta, content=content.model_dump(mode="json"))
 
@@ -149,7 +149,8 @@ def _default_s1_artifact(iteration: Iteration) -> S1Artifact:
     """Generate a default S1 artifact by normalizing requirements from local markdown.
 
     Rules:
-    - If target_uri is a local path, scan *.md files for lines starting with "REQ:".
+    - If target_uri is a local path, scan *.md files for lines containing RFC 2119 keywords
+      (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) or "REQ:" prefix.
     - Build structured requirements with incremental IDs.
     - If target_uri is remote or missing, return empty requirements and summary.
     """
@@ -179,9 +180,14 @@ def _default_s1_artifact(iteration: Iteration) -> S1Artifact:
             full = Path(root, name)
             try:
                 for line in full.read_text(encoding="utf-8").splitlines():
-                    if line.strip().startswith("REQ:"):
+                    stripped = line.strip()
+                    # Match RFC 2119 keywords or REQ: prefix
+                    if stripped.startswith("REQ:"):
                         text = line.split("REQ:", 1)[1].strip()
                         reqs.append(Requirement(id=len(reqs) + 1, text=text))
+                    elif any(kw in stripped for kw in [" MUST ", " SHALL ", " SHOULD ", " MAY "]):
+                        # Capture full sentence containing RFC 2119 keyword
+                        reqs.append(Requirement(id=len(reqs) + 1, text=stripped))
             except Exception:
                 # Skip unreadable files
                 continue

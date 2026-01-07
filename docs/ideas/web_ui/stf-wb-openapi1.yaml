@@ -1,0 +1,659 @@
+openapi: 3.1.0
+info:
+  title: STF‑Workbench (stf‑wb) MVP API
+  version: 0.1.0
+  description: >
+    MVP contract for stf‑wb: GitHub App auth (on behalf of user), repo selection,
+    run/step execution, publishing, and SSE status streaming. Contract-first
+    approach enables parallel UI/backend work and safer rewrites later. [web:887]
+servers:
+  - url: http://localhost:8080
+    description: Local server
+  - url: https://stf-wb.example.org
+    description: Hosted (later)
+
+tags:
+  - name: meta
+  - name: auth
+  - name: projects
+  - name: runs
+  - name: events
+
+paths:
+  /health:
+    get:
+      tags: [meta]
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /auth/start:
+    get:
+      tags: [auth]
+      summary: Start GitHub App user authorization
+      description: >
+        Redirects the browser to GitHub to authorize the GitHub App on behalf of the user. [web:756]
+      operationId: authStart
+      parameters:
+        - name: return_to
+          in: query
+          required: false
+          description: Where to redirect after successful login (UI route).
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to GitHub authorization URL.
+
+  /auth/callback:
+    get:
+      tags: [auth]
+      summary: OAuth callback for GitHub App user authorization
+      description: >
+        Exchanges the received authorization code for a user access token and
+        establishes a session. [web:756]
+      operationId: authCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect back to the UI (or a configured return_to).
+        "400":
+          description: Missing/invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout (invalidate session)
+      operationId: authLogout
+      responses:
+        "204":
+          description: Logged out
+
+  /me:
+    get:
+      tags: [auth]
+      summary: Get current session identity
+      description: >
+        Returns the authenticated GitHub user identity (derived from the user token). [web:756]
+      operationId: getMe
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /installations:
+    get:
+      tags: [auth]
+      summary: List GitHub App installations available to the user
+      description: >
+        Used to choose personal-account or organization installations for repo access. [web:756]
+      operationId: listInstallations
+      responses:
+        "200":
+          description: Installations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [installations]
+                properties:
+                  installations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Installation"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /installations/{installation_id}/repositories:
+    get:
+      tags: [auth]
+      summary: List repositories accessible via an installation
+      operationId: listInstallationRepos
+      parameters:
+        - name: installation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Repositories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [repositories]
+                properties:
+                  repositories:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Repository"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Installation not found / not accessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects:
+    get:
+      tags: [projects]
+      summary: List projects
+      operationId: listProjects
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [projects]
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Project"
+
+    post:
+      tags: [projects]
+      summary: Create project from selected repo
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{project_id}/clone:
+    post:
+      tags: [projects]
+      summary: Clone project repository into server workspace
+      operationId: cloneProject
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Clone started (async job)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /projects/{project_id}/runs:
+    get:
+      tags: [runs]
+      summary: List runs for a project
+      operationId: listRuns
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runs]
+                properties:
+                  runs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Run"
+
+    post:
+      tags: [runs]
+      summary: Create a new run (creates run branch and run.json)
+      operationId: createRun
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRunRequest"
+      responses:
+        "201":
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /runs/{run_id}:
+    get:
+      tags: [runs]
+      summary: Get run details
+      operationId: getRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /runs/{run_id}/steps/{step_id}:
+    post:
+      tags: [runs]
+      summary: Execute a step (async)
+      operationId: executeStep
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: step_id
+          in: path
+          required: true
+          description: Step index (e.g., 0 for Step 0).
+          schema:
+            type: integer
+            minimum: 0
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteStepRequest"
+      responses:
+        "202":
+          description: Step execution started (async job)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Step cannot be executed in current run state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /runs/{run_id}/publish:
+    post:
+      tags: [runs]
+      summary: Publish current run branch to main (PR/merge)
+      operationId: publishRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishRequest"
+      responses:
+        "202":
+          description: Publish started (async job)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /jobs/{job_id}:
+    get:
+      tags: [runs]
+      summary: Get job status (optional; SSE is primary)
+      operationId: getJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /events:
+    get:
+      tags: [events]
+      summary: Server-Sent Events stream (status updates)
+      description: >
+        Streams events as `text/event-stream` for real-time UI updates. [web:428]
+      operationId: events
+      responses:
+        "200":
+          description: Event stream (SSE)
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                enum: ["text/event-stream"]
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                run_status:
+                  summary: Example SSE message
+                  value: |
+                    event: run.status
+                    data: {"run_id":"run_123","state":"running"}
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    User:
+      type: object
+      required: [id, login]
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+
+    Installation:
+      type: object
+      required: [id, account]
+      properties:
+        id:
+          type: integer
+        account:
+          $ref: "#/components/schemas/Account"
+
+    Account:
+      type: object
+      required: [id, login, type]
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+        type:
+          type: string
+          enum: [User, Organization]
+
+    Repository:
+      type: object
+      required: [id, full_name, owner, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        full_name:
+          type: string
+          description: "owner/name"
+        owner:
+          $ref: "#/components/schemas/Account"
+        private:
+          type: boolean
+
+    CreateProjectRequest:
+      type: object
+      required: [installation_id, owner, repo]
+      properties:
+        installation_id:
+          type: integer
+        owner:
+          type: string
+          description: GitHub owner login
+        repo:
+          type: string
+          description: Repository name
+        label:
+          type: string
+          description: Optional user-facing project name
+
+    Project:
+      type: object
+      required: [id, repo, created_at]
+      properties:
+        id:
+          type: string
+        repo:
+          type: object
+          required: [installation_id, owner, repo]
+          properties:
+            installation_id:
+              type: integer
+            owner:
+              type: string
+            repo:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRunRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+
+    Run:
+      type: object
+      required: [id, project_id, branch, state, created_at]
+      properties:
+        id:
+          type: string
+        project_id:
+          type: string
+        branch:
+          type: string
+          example: runs/run_123
+        state:
+          type: string
+          enum: [created, running, blocked, failed, published]
+        created_at:
+          type: string
+          format: date-time
+
+    ExecuteStepRequest:
+      type: object
+      properties:
+        params:
+          type: object
+          additionalProperties: true
+
+    PublishRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [pr, direct_merge]
+          description: MVP default can be chosen by server config.
+        title:
+          type: string
+        body:
+          type: string
+
+    JobAccepted:
+      type: object
+      required: [job_id]
+      properties:
+        job_id:
+          type: string
+
+    JobStatus:
+      type: object
+      required: [job_id, state]
+      properties:
+        job_id:
+          type: string
+        state:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        message:
+          type: string
+        progress:
+          type: number
+          minimum: 0
+          maximum: 1

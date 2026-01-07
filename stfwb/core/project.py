@@ -34,7 +34,7 @@ class Project(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Project":
         """Deserialize project from dictionary."""
-        return cls(**data)  # pyright: ignore[reportArgumentType]
+        return cls(**data)  # type: ignore[arg-type]
 
     def is_valid(self) -> bool:
         """Validate project state."""

@@ -54,7 +54,7 @@ class Iteration(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Iteration":
         """Deserialize iteration from dictionary."""
-        return cls(**data)  # pyright: ignore[reportArgumentType]
+        return cls(**data)  # type: ignore[arg-type]
 
     def start(self) -> None:
         """Transition from created → in_progress."""

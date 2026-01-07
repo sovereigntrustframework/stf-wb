@@ -32,7 +32,7 @@ class Artifact(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "Artifact":
         """Deserialize artifact from dictionary."""
-        return cls(**data)  # pyright: ignore[reportArgumentType]
+        return cls(**data)  # type: ignore[arg-type]
 
 
 class S0Artifact(Artifact):
