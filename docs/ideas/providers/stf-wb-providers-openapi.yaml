@@ -1,0 +1,851 @@
+openapi: 3.0.3
+info:
+  title: STFWorkbench API
+  version: 0.1.0
+  description: >
+    MVP API for STFWorkbench (stfwb). Backend is the single-writer authority and
+    the UI is a REST + SSE client. Authentication is GitHub-only for the MVP,
+    with a provider-agnostic internal user model to keep long-term extensibility.
+servers:
+  - url: http://127.0.0.1:8000
+    description: Local dev
+  - url: https://stfwb.example.com
+    description: Hosted (Oracle) example
+
+tags:
+  - name: System
+  - name: Auth
+  - name: Users
+  - name: GitHub
+  - name: Projects
+  - name: Runs
+  - name: Events
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [System]
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /api/v1/auth/github/start:
+    get:
+      tags: [Auth]
+      summary: Start GitHub login (redirect)
+      description: >
+        Starts the GitHub authorization flow. The backend creates a CSRF state
+        value and redirects the user agent to GitHub. [web:136]
+      operationId: authGithubStart
+      parameters:
+        - name: return_to
+          in: query
+          required: false
+          description: Relative path to redirect to after successful login (e.g., /app).
+          schema:
+            type: string
+            example: /app
+      responses:
+        "302":
+          description: Redirect to GitHub authorization URL
+          headers:
+            Location:
+              description: GitHub authorization URL
+              schema:
+                type: string
+        "400":
+          description: Invalid return_to
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/auth/github/callback:
+    get:
+      tags: [Auth]
+      summary: GitHub login callback
+      description: >
+        OAuth callback endpoint. Validates state and establishes a server-side session. [web:136]
+      operationId: authGithubCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Login success; redirect to UI route (or default).
+          headers:
+            Location:
+              schema:
+                type: string
+        "400":
+          description: Missing/invalid code/state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalidate session)
+      operationId: logout
+      responses:
+        "204":
+          description: Logged out
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/me:
+    get:
+      tags: [Users]
+      summary: Get current session user
+      operationId: getMe
+      security:
+        - CookieSession: []
+      responses:
+        "200":
+          description: Current authenticated user and linked identities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/github/installations:
+    get:
+      tags: [GitHub]
+      summary: List GitHub App installations available to the logged-in user
+      operationId: listGithubInstallations
+      description: >
+        Lists installations the authenticated user can access; used for selecting a repo. [file:21][file:22]
+      security:
+        - CookieSession: []
+      responses:
+        "200":
+          description: Installations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GithubInstallationsList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/github/installations/{installation_id}/repos:
+    get:
+      tags: [GitHub]
+      summary: List repositories for a given installation
+      operationId: listGithubInstallationRepos
+      security:
+        - CookieSession: []
+      parameters:
+        - name: installation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Repositories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GithubReposList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Installation not found/accessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      operationId: listProjects
+      security:
+        - CookieSession: []
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectsList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [Projects]
+      summary: Create a project from a selected repo
+      operationId: createProject
+      description: >
+        Creates a Project binding to a repo. In the MVP, repo.kind is github and
+        includes installation_id for GitHub App access. [file:21][file:22]
+      security:
+        - CookieSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}:
+    get:
+      tags: [Projects]
+      summary: Get project details
+      operationId: getProject
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: proj_01HXYZ...
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}/clone:
+    post:
+      tags: [Projects]
+      summary: Clone project repo into server workspace (MVP helper)
+      operationId: cloneProjectRepo
+      description: >
+        Clones the selected repo into the server workspace. The backend performs all git operations. [file:21][file:22]
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Clone started (async). Progress is emitted via SSE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedJob"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}/runs:
+    get:
+      tags: [Runs]
+      summary: List runs for a project
+      operationId: listRuns
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunsList"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [Runs]
+      summary: Create a run
+      operationId: createRun
+      description: >
+        Creates a Run (typically creating a run branch in the repo). [file:22]
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRunRequest"
+      responses:
+        "201":
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}/runs/{run_id}:
+    get:
+      tags: [Runs]
+      summary: Get run details
+      operationId: getRun
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: run_01HXYZ...
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}/runs/{run_id}/steps/0:
+    post:
+      tags: [Runs]
+      summary: Execute Step 0 (stub)
+      operationId: runStep0
+      description: >
+        Executes Step 0 for a run. Intended to be async; progress is streamed via SSE. [file:21][file:22]
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Step started (async)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedJob"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/projects/{project_id}/runs/{run_id}/publish:
+    post:
+      tags: [Runs]
+      summary: Publish a run (MVP)
+      operationId: publishRun
+      description: >
+        Publishes current run outputs. Implementation detail (PR merge vs direct merge)
+        is intentionally left flexible for MVP. Progress is streamed via SSE. [file:22][file:21]
+      security:
+        - CookieSession: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishRunRequest"
+      responses:
+        "202":
+          description: Publish started (async)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptedJob"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/events:
+    get:
+      tags: [Events]
+      summary: Server-Sent Events stream
+      operationId: events
+      description: >
+        SSE stream of state updates and job progress. The UI connects using EventSource.
+        The backend should emit keep-alive/ping events regularly (e.g., every 1s). [file:21]
+      security:
+        - CookieSession: []
+      responses:
+        "200":
+          description: Event stream
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                enum: ["text/event-stream"]
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE formatted text stream
+              examples:
+                ping:
+                  summary: Ping event
+                  value: |
+                    event: ping
+                    data: {"ts":"2026-01-01T00:00:00Z"}
+
+                job:
+                  summary: Job progress event
+                  value: |
+                    event: job
+                    data: {"job_id":"job_01HXYZ...","status":"running","progress":0.5,"message":"cloning repo"}
+
+                state:
+                  summary: State snapshot event
+                  value: |
+                    event: state
+                    data: {"kind":"project","project_id":"proj_01HXYZ...","updated_at":"2026-01-01T00:00:00Z"}
+
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    CookieSession:
+      type: apiKey
+      in: cookie
+      name: stfwb_session
+      description: >
+        Server-side session cookie (HttpOnly). Tokens remain server-side. [file:21][file:22]
+
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: invalid_request
+            message:
+              type: string
+              example: Missing required parameter.
+            details:
+              type: object
+              additionalProperties: true
+              nullable: true
+
+    Me:
+      type: object
+      required: [user_id, identities]
+      properties:
+        user_id:
+          type: string
+          description: Internal user id (UUID/ULID)
+          example: usr_01HXYZ...
+        identities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalIdentity"
+
+    ExternalIdentity:
+      type: object
+      required: [provider, subject]
+      properties:
+        provider:
+          type: string
+          enum: [github]
+          example: github
+        subject:
+          type: string
+          description: Stable provider user id (do not use username as key)
+          example: "1234567"
+        display:
+          type: string
+          nullable: true
+          example: "octocat"
+        email:
+          type: string
+          nullable: true
+          example: "octo@example.com"
+        avatar_url:
+          type: string
+          nullable: true
+          example: "https://avatars.githubusercontent.com/u/1234567?v=4"
+
+    GithubInstallationsList:
+      type: object
+      required: [installations]
+      properties:
+        installations:
+          type: array
+          items:
+            $ref: "#/components/schemas/GithubInstallation"
+
+    GithubInstallation:
+      type: object
+      required: [installation_id, account_login, account_type]
+      properties:
+        installation_id:
+          type: integer
+          format: int64
+          example: 12345678
+        account_login:
+          type: string
+          example: my-org
+        account_type:
+          type: string
+          enum: [User, Organization]
+          example: Organization
+
+    GithubReposList:
+      type: object
+      required: [repositories]
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: "#/components/schemas/GithubRepo"
+
+    GithubRepo:
+      type: object
+      required: [owner, name, full_name, private]
+      properties:
+        owner:
+          type: string
+          example: my-org
+        name:
+          type: string
+          example: stf-project
+        full_name:
+          type: string
+          example: my-org/stf-project
+        private:
+          type: boolean
+          example: true
+        default_branch:
+          type: string
+          nullable: true
+          example: main
+
+    ProjectsList:
+      type: object
+      required: [projects]
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+
+    CreateProjectRequest:
+      type: object
+      required: [name, repo]
+      properties:
+        name:
+          type: string
+          example: My STF Project
+        repo:
+          $ref: "#/components/schemas/RepoRef"
+
+    RepoRef:
+      oneOf:
+        - $ref: "#/components/schemas/GithubRepoRef"
+        - $ref: "#/components/schemas/LocalGitRepoRef"
+      discriminator:
+        propertyName: kind
+        mapping:
+          github: "#/components/schemas/GithubRepoRef"
+          local_git: "#/components/schemas/LocalGitRepoRef"
+
+    GithubRepoRef:
+      type: object
+      required: [kind, owner, repo, installation_id]
+      properties:
+        kind:
+          type: string
+          enum: [github]
+        owner:
+          type: string
+          example: my-org
+        repo:
+          type: string
+          example: stf-project
+        installation_id:
+          type: integer
+          format: int64
+          description: GitHub App installation id
+          example: 12345678
+
+    LocalGitRepoRef:
+      type: object
+      required: [kind, path]
+      properties:
+        kind:
+          type: string
+          enum: [local_git]
+        path:
+          type: string
+          example: /var/lib/stfwb/repos/my-project.git
+
+    Project:
+      type: object
+      required: [project_id, name, repo, created_at]
+      properties:
+        project_id:
+          type: string
+          example: proj_01HXYZ...
+        name:
+          type: string
+          example: My STF Project
+        repo:
+          $ref: "#/components/schemas/RepoRef"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    RunsList:
+      type: object
+      required: [runs]
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Run"
+
+    CreateRunRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          example: "Run: baseline v0"
+        description:
+          type: string
+          nullable: true
+          example: "Exploring Step 0 normalization choices."
+
+    Run:
+      type: object
+      required: [run_id, project_id, title, status, created_at]
+      properties:
+        run_id:
+          type: string
+          example: run_01HXYZ...
+        project_id:
+          type: string
+          example: proj_01HXYZ...
+        title:
+          type: string
+          example: "Run: baseline v0"
+        status:
+          type: string
+          enum: [created, running, blocked, ready_to_publish, publishing, published, failed]
+          example: created
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    PublishRunRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        mode:
+          type: string
+          description: MVP flexibility: PR-based publish vs direct merge.
+          enum: [pr, direct_merge]
+          nullable: true
+        message:
+          type: string
+          nullable: true
+          example: "Publish Step 0 outputs"
+
+    AcceptedJob:
+      type: object
+      required: [job_id]
+      properties:
+        job_id:
+          type: string
+          example: job_01HXYZ...
+        kind:
+          type: string
+          nullable: true
+          example: clone_repo
+        queued_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-01-01T00:00:00Z"

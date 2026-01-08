@@ -49,15 +49,31 @@ If the OpenAPI contract is stable, Rust migration becomes “re-implement the sa
 
 ### Backend (Python for MVP)
 - Use Python for speed (auth flows + glue + iteration).
-- Structure code into replaceable modules:
-  - `auth/` (GitHub App user tokens, sessions)
-  - `git_adapter/` (clone/branch/commit/pr/merge)
-  - `jobs/` (step execution and scheduling)
-  - `events/` (SSE broadcaster + event schema)
-  - `domain/` (project/run/publication models + serialization)
+- **Reuse existing CLI domain logic**: Build FastAPI layer over existing `stfwb` code:
+  - Reuse: `stfwb.core.{project,iteration,artifact}` models
+  - Reuse: `stfwb.steps.runner` for step execution
+  - Reuse: `stfwb.publishers.github` for publishing
+  - Reuse: `stfwb.utils.storage` for persistence
+- Structure new code into replaceable modules:
+  - `web/auth/` (GitHub App user tokens, sessions)
+  - `web/git_adapter/` (clone/branch/commit/pr/merge)
+  - `web/jobs/` (step execution queue and scheduling)
+  - `web/events/` (SSE broadcaster + event schema)
+  - CLI and web share the same domain logic → easier migration to Rust later
 
 ### Realtime (SSE)
 - Use SSE to push status updates; client uses `EventSource`. [web:428][web:709]
+- Event schema (define early in OpenAPI):
+  - `run.created`, `run.started`, `run.completed`
+  - `step.started`, `step.completed`, `step.failed`
+  - `publish.started`, `publish.progress`, `publish.completed`
+  - `error` (with details)
+
+### Git workspace strategy
+- **One workspace per project**: Isolated clones, no cross-project interference
+- **Run branches**: `runs/<run-id>` (already planned)
+- **Run queue**: FIFO per project, no parallel runs in MVP
+- **Cleanup policy**: Manual for MVP; automated pruning post-MVP
 
 ### Frontend (Vite SPA)
 - Build as static assets into `dist/`. [web:150]
@@ -71,12 +87,16 @@ Even though MVP runs locally, plan for Oracle by keeping these constraints:
 - Stateless API layer (except session store), so scaling later is feasible.
 - Workspace storage: initially local disk; later can be Oracle VM disk / block volume.
 
+### Session storage
+- **MVP**: In-memory dict `{session_id: {github_user_id, github_token, expires_at}}`
+- **Oracle later**: Redis or similar for multi-instance deployments
+
 ### Concrete Oracle plan (later milestone)
 - Run backend in a container (or systemd service on a VM).
 - Serve the Vite `dist/` either:
   - by the backend (same origin, simplest cookies/SSE), or
   - by a static web server / CDN with API on subdomain (requires careful CORS+cookies for SSE). [web:428]
-- Add a real session store (e.g., Redis) when moving beyond single-instance.
+- Add Redis session store when moving beyond single-instance.
 
 ---
 
@@ -128,12 +148,15 @@ Acceptance:
 ### Milestone E — Step 0 stub + Publish (Day 5–7)
 Deliverables:
 - Run Step 0 (generate placeholder outputs) → commit.
-- Publish:
-  - MVP choice: PR + merge OR direct merge (pick simplest).
+- **Validation**: Server-side pre-commit checks (fast, synchronous feedback)
+- **Publish strategy**: PR per publication (not per run)
+  - Each publication creates a new PR from run branch to main
+  - Clearer audit trail, supports out-of-order publications
+  - Branch protection + GitHub Actions checks gate merges (post-MVP)
 - SSE streams publish progress.
 
 Acceptance:
-- User can execute Step 0 and see results on `main`.
+- User can execute Step 0 and see results merged to `main` via PR.
 
 ---
 

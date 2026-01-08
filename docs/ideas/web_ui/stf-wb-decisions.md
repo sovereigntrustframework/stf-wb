@@ -49,17 +49,14 @@ This document consolidates the current architecture decisions and the remaining 
   - Baseline = provider raw spec + digest/hash.
   - Step 0 belongs to the Run (not the Baseline), since normalization/parameters may vary. [memory:719]
 - Commit policy constraint: only commit/push when the versioned paragraph→requirement→property→model graph is intact, unique, and consistently versioned. [memory:725]
+- **Validation execution**: Hybrid model
+  - MVP: Server-side pre-commit validation (fast, synchronous feedback)
+  - Post-MVP: GitHub Actions for authoritative CI validation (branch protection)
+- **Session storage**: In-memory for MVP, Redis/similar for Oracle multi-instance deployment
+- **Workspace strategy**: One isolated workspace per project; runs queued FIFO per project (no parallel execution in MVP)
 
 ### Open questions
 - Git credential flow end-to-end: how the backend receives, stores (or avoids storing), and refreshes GitHub access in a way that does not require PATs and remains secure across local and Oracle deployments. [memory:722][memory:723]
-- Settings storage:
-  - Server-side user profile area vs
-  - In-repo settings file(s) vs
-  - Separate storage (DB/object storage) as a cache/index. [memory:721]
-- Validation execution points:
-  - Server-side pre-commit/pre-push validation vs
-  - GitHub Actions/CI validation vs
-  - Hybrid model (fast local validation + authoritative CI). [memory:725]
 - State model contract: exact shape of the “authoritative state” the UI consumes (project/run/publication status), and how it maps to GitHub primitives (commits/branches/PRs/check runs). [memory:719]
 - Long-running jobs: how runs/steps are scheduled, retried, and surfaced to the UI (job IDs, progress, logs, resumability). [memory:719]
 
@@ -72,11 +69,9 @@ This document consolidates the current architecture decisions and the remaining 
 - Each Run works on its own branch (e.g., `runs/<run-id>`). [memory:719]
 - A Run can be published multiple times: multiple merges to `main` are allowed as “milestones” when outputs are audit-worthy and reusable. [memory:719]
 - Branch protection is expected, with required status checks gating merges. [web:364]
+- **PR strategy: One PR per publication/milestone** (clearer audit trail, supports out-of-order publications, better CI integration).
 
 ### Open questions
-- PR strategy:
-  - One long PR per Run (lower noise, higher accumulation) vs
-  - One PR per publication/milestone (clearer audit trail per release event). [memory:719]
 - “Level / milestone” definition:
   - Level as a derived property computed by validators vs
   - Level as an explicit action/intent (e.g., `publish?level=S4`)—deferred until MVP stabilizes. [memory:719]
@@ -95,7 +90,15 @@ This document consolidates the current architecture decisions and the remaining 
 
 ## Next actions (to close open questions)
 
-- Pick the MVP’s 3 pages and the minimal end-to-end flows they must support (create project, create run, execute steps, publish). [memory:719]
-- Decide PR strategy (per-run vs per-publication) because it impacts UI model, backend API, and GitHub UX. [memory:719]
-- Decide whether to implement an explicit publication ledger file early (simplifies UI queries and audit semantics). [memory:719]
-- Specify the GitHub auth model precisely (OAuth + GitHub App token exchange, server-side storage expectations, installation selection UX). [web:447][memory:722]
+### Decided/Ready to implement
+- ✅ MVP's 3 pages: Login/repo selection, Project dashboard (with runs list), Run detail (with step execution + publish)
+- ✅ PR strategy: One PR per publication (not per run)
+- ✅ Backend structure: FastAPI layer reusing existing `stfwb` CLI domain logic
+- ✅ Validation: Server-side for MVP, GitHub Actions post-MVP
+- ✅ Workspace: One workspace per project, FIFO run queue
+
+### Still open (can defer to implementation)
+- Publication ledger file (simplifies UI queries) — can add when needed
+- Level/milestone formalization — defer until methodology stabilizes
+- GitHub auth token refresh mechanism — implement as part of Milestone B
+- Required status checks design — defer to post-MVP branch protection setup

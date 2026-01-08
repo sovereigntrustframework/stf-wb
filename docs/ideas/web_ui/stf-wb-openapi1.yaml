@@ -469,6 +469,9 @@ paths:
       summary: Server-Sent Events stream (status updates)
       description: >
         Streams events as `text/event-stream` for real-time UI updates. [web:428]
+        Event types: run.created, run.started, run.completed,
+        step.started, step.completed, step.failed,
+        publish.started, publish.progress, publish.completed, error
       operationId: events
       responses:
         "200":
@@ -484,10 +487,20 @@ paths:
                 type: string
               examples:
                 run_status:
-                  summary: Example SSE message
+                  summary: Run status event
                   value: |
-                    event: run.status
-                    data: {"run_id":"run_123","state":"running"}
+                    event: run.started
+                    data: {"run_id":"run_123","project_id":"proj1","state":"running"}
+                step_status:
+                  summary: Step completion event
+                  value: |
+                    event: step.completed
+                    data: {"run_id":"run_123","step_id":"s0","status":"completed","artifacts":{"s0.a":"..."}}
+                publish_progress:
+                  summary: Publication progress event
+                  value: |
+                    event: publish.progress
+                    data: {"run_id":"run_123","publication_id":"pub1","phase":"pr_created","pr_number":42}
         "401":
           description: Not authenticated
           content:
