@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext'
 
 interface HomePageProps {
   onStartProject: (config: ProjectConfig) => void
+  onGoToProjects?: () => void
+  allowProjectCreation?: boolean
 }
 
 export interface ProjectConfig {
@@ -12,8 +14,8 @@ export interface ProjectConfig {
   specPath: string
 }
 
-export function HomePage({ onStartProject }: HomePageProps) {
-  const { user, login } = useAuth()
+export function HomePage({ onStartProject, onGoToProjects, allowProjectCreation = true }: HomePageProps) {
+  const { user, login, logout } = useAuth()
   const [showNewProject, setShowNewProject] = useState(false)
   const [formData, setFormData] = useState<ProjectConfig>({
     owner: 'sovereign-trust',
@@ -38,32 +40,46 @@ export function HomePage({ onStartProject }: HomePageProps) {
   return (
     <div className="home-page">
       <div className="home-container">
-        <div className="home-header">
-          <div className="logo-section">
-            <h1>STF-Workbench</h1>
-            <p className="tagline">Specification & Assurance Methodology Workbench</p>
+        <div className="page-header-bar">
+          <div className="header-logo-static">
+            <img src="/stf-logo.png" alt="STF Logo" className="header-logo" />
+          </div>
+          <h1 className="header-title">STF-Workbench</h1>
+          <div className="header-right">
+            {user && user.identities && user.identities.length > 0 ? (
+              <>
+                <div className="header-user" onClick={onGoToProjects} style={{ cursor: onGoToProjects ? 'pointer' : 'default' }} title="Go to my projects">
+                  <img
+                    src={user.identities[0].avatar_url || undefined}
+                    alt={user.identities[0].display || undefined}
+                    className="header-user-avatar"
+                  />
+                  <span className="header-user-name">{user.identities[0].display}</span>
+                </div>
+                <button className="header-logout-btn" onClick={logout} title="Logout">
+                  Logout
+                </button>
+              </>
+            ) : (
+              <button className="header-login-btn" onClick={login}>
+                Sign In
+              </button>
+            )}
           </div>
         </div>
 
         {!showNewProject ? (
-          <div className="home-options">
-            {user && user.identities && user.identities.length > 0 && (
-              <div className="user-banner">
-                <img src={user.identities[0].avatar_url || ''} alt={user.identities[0].display} className="user-avatar" />
-                <div className="user-info">
-                  <div className="user-name">{user.identities[0].display}</div>
-                  <div className="user-login">GitHub ({user.user_id})</div>
-                </div>
-              </div>
-            )}
+            <div className="home-options">
             <div className="options-grid">
-              <button className="option-card start-project" onClick={() => setShowNewProject(true)}>
-                <div className="option-icon">📋</div>
-                <div className="option-title">Start New Project</div>
-                <div className="option-description">
-                  Create a new workbench run from a GitHub repository and specification
-                </div>
-              </button>
+              {allowProjectCreation && (
+                <button className="option-card start-project" onClick={() => setShowNewProject(true)}>
+                  <div className="option-icon">📋</div>
+                  <div className="option-title">Start New Project</div>
+                  <div className="option-description">
+                    Create a new workbench run from a GitHub repository and specification
+                  </div>
+                </button>
+              )}
 
               {!user && (
                 <button className="option-card login" onClick={login}>

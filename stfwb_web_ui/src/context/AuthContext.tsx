@@ -24,6 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const API_BASE = 'http://localhost:8000'
   const [user, setUser] = useState<AuthUser | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserId(callbackUserId)
 
       // Fetch full user info from backend
-      fetch(`/auth/user?user_id=${callbackUserId}`)
+      fetch(`${API_BASE}/auth/user?user_id=${callbackUserId}`)
         .then((res) => res.json())
         .then((data) => {
           setUser(data)
@@ -82,14 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = () => {
-    window.location.href = '/auth/github/start'
+    // Hit backend directly to avoid frontend dev server path issues
+    window.location.href = `${API_BASE}/auth/github/start`
   }
 
   const logout = async () => {
     if (!userId) return
 
     try {
-      await fetch(`/auth/logout?user_id=${userId}`, { method: 'POST' })
+      await fetch(`${API_BASE}/auth/logout?user_id=${userId}`, { method: 'POST' })
       setUser(null)
       setUserId(null)
       localStorage.removeItem('user_id')

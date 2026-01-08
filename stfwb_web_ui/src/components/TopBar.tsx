@@ -6,9 +6,10 @@ interface TopBarProps {
   onSync?: () => void
   onRunStep?: (stepId: string) => void
   onHome?: () => void
+  onBackToProjects?: () => void
 }
 
-export function TopBar({ run, onSync, onRunStep, onHome }: TopBarProps) {
+export function TopBar({ run, onSync, onRunStep, onHome, onBackToProjects }: TopBarProps) {
   const { user, logout } = useAuth()
   const getStateColor = (state: string) => {
     switch (state) {
@@ -43,13 +44,12 @@ export function TopBar({ run, onSync, onRunStep, onHome }: TopBarProps) {
   return (
     <div className="top-bar">
       <div className="top-bar-left">
-        <button className="home-btn" onClick={onHome} title="Back to home">
-          ⌂
+        <button className="logo-home-btn" onClick={onHome} title="Go to home">
+          <img src="/stf-logo.png" alt="STF Logo" className="top-bar-logo" />
         </button>
-        <div className="project-context">
-          <h2>{run.project.name}</h2>
-          <span className="secondary">{run.project.owner}</span>
-        </div>
+        <button className="back-to-projects-btn" onClick={onBackToProjects} title="Back to projects">
+          ← Back to Projects
+        </button>
 
         <div className="run-context">
           <div className="run-label">{run.label}</div>

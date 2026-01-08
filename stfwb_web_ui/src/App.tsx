@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRun } from './hooks/useRun'
 import { useAuth } from './context/AuthContext'
 import { TopBar } from './components/TopBar'
@@ -6,6 +6,7 @@ import { MethodologyView } from './components/MethodologyView'
 import { StepDetails } from './components/StepDetails'
 import { LogConsole } from './components/LogConsole'
 import { HomePage, type ProjectConfig } from './components/HomePage'
+import { ProjectsPage } from './components/ProjectsPage'
 import './App.css'
 
 function App() {
@@ -14,12 +15,26 @@ function App() {
   const [connected, setConnected] = useState(false)
   const [selectedStep, setSelectedStep] = useState<string | null>('S0')
   const [logCollapsed, setLogCollapsed] = useState(false)
-  const [showHome, setShowHome] = useState(true)
-  const [currentProject, setCurrentProject] = useState<ProjectConfig | null>(null)
+  const [view, setView] = useState<'landing' | 'projects' | 'workbench'>('landing')
+  const [projects, setProjects] = useState<ProjectConfig[]>([
+    {
+      owner: 'sovereign-trust',
+      repo: 'stf-wb',
+      branch: 'main',
+      specPath: 'docs/specs/stf-workbench-v0.2.0.md',
+    },
+    {
+      owner: 'example-org',
+      repo: 'trust-runbook',
+      branch: 'main',
+      specPath: 'specs/trust-runbook.md',
+    },
+  ])
+  const prevUserRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     // Connect to SSE endpoint
-    const eventSource = new EventSource('/api/events')
+    const eventSource = new EventSource('http://localhost:8000/events')
 
     eventSource.onopen = () => {
       console.log('SSE connection opened')
@@ -56,6 +71,32 @@ function App() {
     }
   }, [handleSSEEvent, addLog])
 
+  // Manage view transitions based on auth state
+  useEffect(() => {
+    const isCurrentlyAuthenticated = user !== null
+    const wasAuthenticated = prevUserRef.current
+
+    // Only auto-redirect on auth state changes, not on every render
+    if (wasAuthenticated === null) {
+      // Initial load - if user is logged in, go to projects
+      if (isCurrentlyAuthenticated) {
+        setView('projects')
+      }
+    } else if (wasAuthenticated !== isCurrentlyAuthenticated) {
+      // Auth state changed
+      if (isCurrentlyAuthenticated) {
+        // User just logged in - redirect to projects
+        setView('projects')
+      } else {
+        // User just logged out - redirect to landing
+        setView('landing')
+      }
+    }
+
+    // Update the ref
+    prevUserRef.current = isCurrentlyAuthenticated
+  }, [user])
+
   const handleSync = async () => {
     addLog({
       timestamp: new Date().toISOString(),
@@ -91,8 +132,12 @@ function App() {
   const currentStep = selectedStep ? run.steps[selectedStep] : null
 
   const handleStartProject = (config: ProjectConfig) => {
-    setCurrentProject(config)
-    setShowHome(false)
+    setView('workbench')
+    // Only add project if it doesn't already exist
+    setProjects((prev) => {
+      const exists = prev.some((p) => p.owner === config.owner && p.repo === config.repo)
+      return exists ? prev : [...prev, config]
+    })
     addLog({
       timestamp: new Date().toISOString(),
       type: 'info',
@@ -101,12 +146,26 @@ function App() {
   }
 
   const handleBackToHome = () => {
-    setShowHome(true)
-    setCurrentProject(null)
+    setView('landing')
   }
 
-  if (showHome) {
-    return <HomePage onStartProject={handleStartProject} />
+  const handleBackToProjects = () => {
+    setView('projects')
+  }
+
+  // Switch views based on auth state and current selection
+  if (view === 'landing') {
+    return <HomePage onStartProject={handleStartProject} onGoToProjects={user ? () => setView('projects') : undefined} allowProjectCreation={!!user} />
+  }
+
+  if (view === 'projects') {
+    return (
+      <ProjectsPage
+        projects={projects}
+        onStartProject={handleStartProject}
+        onBackToLanding={() => setView('landing')}
+      />
+    )
   }
 
   return (
@@ -116,6 +175,7 @@ function App() {
         onSync={handleSync}
         onRunStep={handleRunStep}
         onHome={handleBackToHome}
+        onBackToProjects={handleBackToProjects}
       />
 
       <div className="main-layout">
